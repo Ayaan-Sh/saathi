@@ -79,7 +79,7 @@
 </div>
 </section>
 
-<section id="dashboard" class="dbv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Your bookings</h2><button class="btn alt" id="dref" type="button">Refresh</button></div><p class="meta" style="max-width:56ch;margin-top:10px">Accept or decline each request. If two requests land on the same day, accept the one you want and decline the other.</p><div id="dash"></div></section>
+<section id="dashboard" class="dbv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Your bookings</h2><button class="btn alt" id="dref" type="button">Refresh</button></div><p class="meta" style="max-width:56ch;margin-top:10px">Accept or decline each request. If two requests land on the same day, accept the one you want and reject the other.</p><div id="dash"></div></section>
 
 <section id="verify" class="vw"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
 <h2>Verify your identity</h2>
@@ -100,6 +100,7 @@
 </div>
 
 <dialog id="dlg"><form method="dialog" id="bk"></form></dialog>
+<dialog id="cdlg"><h2 id="ctitle" style="font-size:22px">Chat</h2><p class="meta" style="margin-top:6px">Messages are deleted 24 hours after they are sent. Keep the chat about your booking.</p><div class="cbox" id="cbox" aria-live="polite"></div><p class="meta" id="cerr" role="alert" style="color:#d33"></p><form class="vf" id="cf"><input id="cin" maxlength="500" placeholder="Type a message" autocomplete="off" aria-label="Message" required><button class="btn" type="submit">Send</button></form><button class="btn alt" id="cclose" type="button" style="margin-top:12px">Close</button></dialog>
 <dialog id="pdlg"><div id="pbody"></div><button class="btn alt" id="pclose" type="button" style="margin-top:14px">Close</button></dialog>
 <div class="toast" id="toast" role="status"></div>
 

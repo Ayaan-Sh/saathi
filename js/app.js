@@ -176,10 +176,10 @@ async function loadBookings(){
  if(ids.length){var n=await sb.from("public_companions").select("id,name").in("id",ids);(n.data||[]).forEach(function(x){names[x.id]=x.name})}
  el.innerHTML=r.data.length?r.data.map(function(b){
   var inc=mine&&b.companion_id==mine.id,act=ACTS[KEYS.indexOf(b.activity)]||b.activity;
-  var btns=inc&&b.status=="requested"?'<button class="btn" data-b="'+esc(b.id)+'" data-s="accepted">Accept</button> <button class="btn alt" data-b="'+esc(b.id)+'" data-s="declined">Decline</button>':!inc&&(b.status=="requested"||b.status=="accepted")?'<button class="btn alt" data-b="'+esc(b.id)+'" data-s="cancelled">Cancel request</button>':'';
-  return '<div class="bk"><h3>'+(inc?'Request from a customer':'Your request to '+esc(names[b.companion_id]||'a companion'))+'</h3><p class="meta">'+esc(act)+' · '+new Date(b.starts_at).toLocaleString()+' · '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' · '+inr(b.amount_paise/100)+' + '+inr(b.fee_paise/100)+' fee</p><p><b>Status: '+esc(b.status)+'</b>'+(b.status=="accepted"?' (payment is not live yet)':'')+'</p>'+btns+'</div>'}).join(""):'<div class="empty">No bookings yet.</div>';
+  var btns=inc&&b.status=="requested"?'<button class="btn" data-b="'+esc(b.id)+'" data-s="accepted">Accept</button> <button class="btn alt" data-b="'+esc(b.id)+'" data-s="declined">Reject</button>':!inc&&(b.status=="requested"||b.status=="accepted")?'<button class="btn alt" data-b="'+esc(b.id)+'" data-s="cancelled">Cancel request</button>':'';
+  return '<div class="bk"><h3>'+(inc?'Request from a customer':'Your request to '+esc(names[b.companion_id]||'a companion'))+'</h3><p class="meta">'+esc(act)+' · '+new Date(b.starts_at).toLocaleString()+' · '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' · '+inr(b.amount_paise/100)+' + '+inr(b.fee_paise/100)+' fee</p><p><b>Status: '+esc(b.status)+'</b>'+(b.status=="accepted"?' (payment is not live yet)':'')+'</p>'+btns+(b.status=="accepted"?'<button class="btn" data-chat="'+esc(b.id)+'" data-t="'+esc(act)+'">Chat</button>':'')+'</div>'}).join(""):'<div class="empty">No bookings yet.</div>';
 }
-$("bklist").onclick=async function(e){var b=e.target.closest("button[data-b]");if(!b)return;b.disabled=true;
+$("bklist").onclick=async function(e){var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}var b=e.target.closest("button[data-b]");if(!b)return;b.disabled=true;
  var r=await sb.from("bookings").update({status:b.dataset.s}).eq("id",b.dataset.b);
  if(r.error)toast("Couldn't update. "+r.error.message);loadBookings()};
 
@@ -298,11 +298,11 @@ function dcard(b,kind,live){
  if(kind=="req"){
   var o=live.filter(function(x){return x.id!=b.id&&dayKey(x.starts_at)==dayKey(b.starts_at)});
   var acc=o.filter(function(x){return x.status=="accepted"}),pen=o.filter(function(x){return x.status=="requested"});
-  if(acc.length){c=1;h+='<div class="warn"><b>Same day:</b> you already accepted another booking this day, at '+tm(acc[0].starts_at)+'. You can decline this one.</div>'}
-  else if(pen.length){c=1;h+='<div class="warn"><b>Same day:</b> you have '+pen.length+' other request(s) for this day. Accept the one you want and decline the rest.</div>'}
-  h+='<button class="btn" data-b="'+id+'" data-s="accepted" data-f="requested" data-c="'+c+'">Accept</button><button class="btn alt" data-b="'+id+'" data-s="declined" data-f="requested">Decline</button>';
+  if(acc.length){c=1;h+='<div class="warn"><b>Same day:</b> you already accepted another booking this day, at '+tm(acc[0].starts_at)+'. You can reject this one.</div>'}
+  else if(pen.length){c=1;h+='<div class="warn"><b>Same day:</b> you have '+pen.length+' other request(s) for this day. Accept the one you want and reject the rest.</div>'}
+  h+='<button class="btn" data-b="'+id+'" data-s="accepted" data-f="requested" data-c="'+c+'">Accept</button><button class="btn alt" data-b="'+id+'" data-s="declined" data-f="requested">Reject</button>';
  }else if(kind=="up"){
-  h+='<p><span class="pill">Accepted</span> <span class="meta">Payment is not live yet.</span></p><button class="btn alt" data-b="'+id+'" data-s="cancelled" data-f="accepted">Cancel booking</button>';
+  h+='<p><span class="pill">Accepted</span> <span class="meta">Payment is not live yet.</span></p><button class="btn" data-chat="'+id+'" data-t="'+esc(act)+'">Chat</button><button class="btn alt" data-b="'+id+'" data-s="cancelled" data-f="accepted">Cancel booking</button>';
  }else{
   h+='<p><span class="pill">'+esc(b.status=="requested"?"expired":b.status)+'</span></p>';
  }
@@ -325,16 +325,52 @@ async function loadDash(){
 }
 $("dref").onclick=function(){loadDash()};
 $("dash").onclick=async function(e){
+ var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}
  var b=e.target.closest("button[data-b]");if(!b||!mine)return;var s=b.dataset.s;
- if(s=="declined"&&!confirm("Decline this request?"))return;
+ if(s=="declined"&&!confirm("Reject this request?"))return;
  if(s=="cancelled"&&!confirm("Cancel this accepted booking? Only do this if you truly can't make it."))return;
  if(s=="accepted"&&b.dataset.c=="1"&&!confirm("You already have another booking on this day. Accept this one too?"))return;
  b.disabled=true;
  var r=await sb.from("bookings").update({status:s}).eq("id",b.dataset.b).eq("companion_id",mine.id).eq("status",b.dataset.f).select("id");
  if(r.error)toast("Couldn't update. "+r.error.message);
  else if(!r.data||!r.data.length)toast("This booking changed in the meantime. Refreshed your list.");
- else toast(s=="accepted"?"Booking accepted.":s=="declined"?"Request declined.":"Booking cancelled.");
+ else toast(s=="accepted"?"Booking accepted.":s=="declined"?"Request rejected.":"Booking cancelled.");
  loadDash();
+};
+
+/* ---------- 24-hour booking chat ---------- */
+var cs={},DAY=86400000;
+function chatStop(){if(cs.ch)sb.removeChannel(cs.ch);clearInterval(cs.poll);cs={}}
+function chatDraw(){
+ var box=$("cbox"),near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+ var l=Object.keys(cs.seen).map(function(k){return cs.seen[k]}).filter(function(m){return Date.now()-new Date(m.created_at)<DAY}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at)});
+ box.innerHTML=l.length?l.map(function(m){return '<div class="msg'+(m.sender_id==user.id?' me':'')+'">'+esc(m.body)+'<small>'+tm(m.created_at)+'</small></div>'}).join(""):'<p class="meta">No messages yet. Say hi and agree on where to meet.</p>';
+ if(near||cs.fresh)box.scrollTop=box.scrollHeight;
+}
+async function chatFetch(){
+ if(!cs.id)return;var id=cs.id;
+ var r=await sb.from("messages").select("id,sender_id,body,created_at").eq("booking_id",id).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at");
+ if(cs.id!=id)return;
+ if(r.error){$("cerr").textContent="Couldn't load messages. "+r.error.message;return}
+ $("cerr").textContent="";r.data.forEach(function(m){cs.seen[m.id]=m});chatDraw();
+}
+async function openChat(id,title){
+ if(!user||!sb)return;chatStop();cs={id:id,seen:{},fresh:true};
+ $("ctitle").textContent=title?"Chat: "+title:"Chat";$("cbox").innerHTML='<p class="meta">Loading...</p>';$("cerr").textContent="";$("cin").value="";
+ $("cdlg").showModal();
+ cs.ch=sb.channel("chat-"+id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"booking_id=eq."+id},function(p){if(cs.id==id&&p.new){cs.seen[p.new.id]=p.new;chatDraw()}}).subscribe();
+ cs.poll=setInterval(chatFetch,8000);
+ await chatFetch();if(cs.id==id)cs.fresh=false;
+}
+$("cclose").onclick=function(){$("cdlg").close()};
+$("cdlg").addEventListener("close",chatStop);
+$("cf").onsubmit=async function(e){
+ e.preventDefault();var t=$("cin").value.trim();if(!t||!cs.id)return;
+ var btn=e.submitter;if(btn)btn.disabled=true;
+ var r=await sb.from("messages").insert({booking_id:cs.id,body:t}).select("id,sender_id,body,created_at").single();
+ if(btn)btn.disabled=false;
+ if(r.error){$("cerr").textContent="Couldn't send. "+r.error.message;return}
+ $("cerr").textContent="";$("cin").value="";cs.seen[r.data.id]=r.data;cs.fresh=true;chatDraw();cs.fresh=false;$("cin").focus();
 };
 
 /* ---------- routing + init ---------- */
