@@ -147,7 +147,7 @@ $("form").onsubmit=async function(e){
  if(btn)btn.disabled=false;
 };
 
-$("showon").onchange=function(){prefs.showOnline=this.checked;persist();if(!mine)return;if(this.checked)ping();else sb.from("companions").update({last_seen:null}).eq("id",mine.id).then(function(){load()})};
+$("showon").onchange=function(){prefs.showOnline=this.checked;persist();if(typeof presStop=="function"){presStop();presInit();P.t=setInterval(presInit,180000)}if(!mine)return;if(this.checked)ping();else sb.from("companions").update({last_seen:null}).eq("id",mine.id).then(function(){load()})};
 
 /* ---------- booking ---------- */
 function openBook(id){
@@ -197,7 +197,7 @@ async function loadBookings(){
 }
 $("bklist").onclick=async function(e){
  if(safety(e))return;
- var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}
+ var ch=e.target.closest("button[data-chat]");if(ch){location.hash="#/chats/"+ch.dataset.chat;return}
  var b=e.target.closest("button[data-b]");if(!b)return;
  if(!confirm("Cancel this request?"))return;b.disabled=true;
  var r=await sb.from("bookings").update({status:b.dataset.s}).eq("id",b.dataset.b).eq("customer_id",user.id).select("id");
@@ -224,7 +224,7 @@ $("rform").onsubmit=async function(e){
  if(r.error){$("rerr").textContent=r.error.message;return}
  $("rdlg").close();if($("cdlg").open)$("cdlg").close();
  toast("Thanks. Our team will review your report."+(blk?" This person can no longer contact you.":""));
- await loadHidden();var v=document.body.dataset.view;if(v=="dashboard")loadDash();else if(v=="bookings")loadBookings();else load()};
+ await loadHidden();var v=document.body.dataset.view;if(v=="dashboard")loadDash();else if(v=="bookings")loadBookings();else if(v=="chats"){location.hash="#/chats";chatsRefresh(true)}else load()};
 $("rdlg").addEventListener("click",function(e){if(e.target==this)this.close()});
 
 /* ---------- ID verification chat ---------- */
@@ -375,7 +375,7 @@ async function loadDash(){
 $("dref").onclick=function(){loadDash()};
 $("dash").onclick=async function(e){
  if(safety(e))return;
- var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}
+ var ch=e.target.closest("button[data-chat]");if(ch){location.hash="#/chats/"+ch.dataset.chat;return}
  var b=e.target.closest("button[data-b]");if(!b||!mine)return;var s=b.dataset.s;
  if(s=="declined"&&!confirm("Reject this request?"))return;
  if(s=="cancelled"&&!confirm("Cancel this accepted booking? Only do this if you truly can't make it."))return;
@@ -392,7 +392,7 @@ $("dash").onclick=async function(e){
 var cs={},DAY=86400000;
 function chatStop(){if(cs.ch)sb.removeChannel(cs.ch);clearInterval(cs.poll);cs={}}
 function chatDraw(){
- var box=$("cbox"),near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+ var box=$(cs.pg?"pcbox":"cbox"),near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
  var l=Object.keys(cs.seen).map(function(k){return cs.seen[k]}).filter(function(m){return Date.now()-new Date(m.created_at)<DAY}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at)});
  box.innerHTML=l.length?l.map(function(m){return '<div class="msg'+(m.sender_id==user.id?' me':'')+'">'+esc(m.body)+'<small>'+tm(m.created_at)+'</small></div>'}).join(""):'<p class="meta">No messages yet. Say hi and agree on where to meet.</p>';
  if(near||cs.fresh)box.scrollTop=box.scrollHeight;
@@ -401,13 +401,13 @@ async function chatFetch(){
  if(!cs.id)return;var id=cs.id;
  var r=await sb.from("messages").select("id,sender_id,body,created_at").eq("booking_id",id).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at");
  if(cs.id!=id)return;
- if(r.error){$("cerr").textContent="Couldn't load messages. "+r.error.message;return}
- $("cerr").textContent="";r.data.forEach(function(m){cs.seen[m.id]=m});chatDraw();
+ var ce=$(cs.pg?"pcerr":"cerr");if(r.error){ce.textContent="Couldn't load messages. "+r.error.message;return}
+ ce.textContent="";r.data.forEach(function(m){cs.seen[m.id]=m});chatDraw();
 }
-async function openChat(id,title){
- if(!user||!sb)return;chatStop();cs={id:id,seen:{},fresh:true};nRead("chat:"+id);
- $("ctitle").textContent=title?"Chat: "+title:"Chat";$("cbox").innerHTML='<p class="meta">Loading...</p>';$("cerr").textContent="";$("cin").value="";
- $("cdlg").showModal();
+async function openChat(id,title,pg){
+ if(!user||!sb)return;chatStop();cs={id:id,seen:{},fresh:true,pg:!!pg};nRead("chat:"+id);
+ $(pg?"pcbox":"cbox").innerHTML='<p class="meta">Loading...</p>';$(pg?"pcerr":"cerr").textContent="";$(pg?"pcin":"cin").value="";
+ if(!pg){$("ctitle").textContent=title?"Chat: "+title:"Chat";$("cdlg").showModal()}
  cs.ch=sb.channel("chat-"+id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"booking_id=eq."+id},function(p){if(cs.id==id&&p.new){cs.seen[p.new.id]=p.new;chatDraw()}}).subscribe();
  cs.poll=setInterval(chatFetch,8000);
  await chatFetch();if(cs.id==id)cs.fresh=false;
@@ -475,12 +475,13 @@ function npush(it){
 function nRead(go){N.items.forEach(function(i){if(i.go==go)i.read=true});nSave();nRender()}
 function nGo(it){
  if(!it)return;it.read=true;nSave();nRender();closePanel();
- if(it.go.indexOf("chat:")==0){openChat(it.go.slice(5),"");return}
+ if(it.go.indexOf("chat:")==0){location.hash="#/chats/"+it.go.slice(5);return}
  if(location.hash==it.go)route();else location.hash=it.go;
 }
 function nMsg(m){
  if(!user||m.sender_id==user.id)return;var k="m:"+m.id;if(N.keys[k])return;
- if($("cdlg").open&&cs.id==m.booking_id){N.keys[k]=1;if(N.loud)chime("msg");return}
+ if(document.body.dataset.view=="chats")chatsRefresh();
+ if(cs.id==m.booking_id&&($("cdlg").open||(cs.pg&&document.body.dataset.view=="chats"))){N.keys[k]=1;if(N.loud)chime("msg");return}
  var t=String(m.body||"");
  npush({id:k,kind:"msg",title:"New message",text:t.length>60?t.slice(0,60)+"\u2026":t,go:"chat:"+m.booking_id});
 }
@@ -522,14 +523,15 @@ async function notifStart(){
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"companion_photos"},function(){loadExtras()})
   .subscribe();
  N.poll=setInterval(nPoll,45000);
+ presInit();P.t=setInterval(presInit,180000);
 }
 function notifStop(){
  if(N.ch&&sb)sb.removeChannel(N.ch);clearInterval(N.poll);N.ch=null;N.items=[];N.keys={};N.loud=false;
- $("bellw").hidden=true;$("chatw").hidden=true;closePanel();closeChats();nRender();
+ $("bellw").hidden=true;$("chatw").hidden=true;closePanel();presStop();nRender();
 }
 function closePanel(){$("npanel").hidden=true;$("bell").setAttribute("aria-expanded","false")}
 $("bell").onclick=function(e){
- e.stopPropagation();closeChats();var p=$("npanel");if(!p.hidden){closePanel();return}
+ e.stopPropagation();var p=$("npanel");if(!p.hidden){closePanel();return}
  var r=this.getBoundingClientRect(),w=Math.min(360,innerWidth-24);
  p.style.width=w+"px";p.style.top=Math.round(r.bottom+8)+"px";p.style.left=Math.max(12,Math.min(innerWidth-w-12,r.right-w))+"px";
  p.hidden=false;this.setAttribute("aria-expanded","true");
@@ -544,50 +546,94 @@ document.addEventListener("keydown",function(e){if(e.key=="Escape")closePanel()}
 window.addEventListener("scroll",closePanel,{passive:true});window.addEventListener("resize",closePanel);
 document.addEventListener("visibilitychange",function(){if(document.visibilityState=="visible"&&user)nPoll()});
 
-/* ---------- chat list ---------- */
-var CNAME={};
+/* ---------- online presence (per booking, only the two people in it) ---------- */
+var P={ch:{},t:null},ONL={};
+function presStop(){clearInterval(P.t);Object.keys(P.ch).forEach(function(k){try{sb.removeChannel(P.ch[k])}catch(e){}});P.ch={};ONL={}}
+async function presInit(){
+ if(!user||!sb)return;var me=user.id;
+ var r=await sb.from("bookings").select("id").in("status",["accepted","paid","completed"]).order("starts_at",{ascending:false}).limit(40);
+ if(r.error||!user||user.id!=me)return;
+ r.data.forEach(function(b){
+  if(P.ch[b.id])return;
+  var ch=sb.channel("pres-"+b.id,{config:{presence:{key:me}}});
+  ch.on("presence",{event:"sync"},function(){ONL[b.id]=Object.keys(ch.presenceState()).some(function(k){return k!=me});presPaint()})
+    .subscribe(function(s){if(s==="SUBSCRIBED"&&prefs.showOnline!==false)ch.track({at:Date.now()})});
+  P.ch[b.id]=ch;
+ });
+}
+function presPaint(){if(document.body.dataset.view=="chats"){paintList();paintHead()}}
+
+/* ---------- chats page ---------- */
+var CR=[],CNAME={},CUR="",CT=null;
 function chatBadge(){var n=N.items.filter(function(i){return !i.read&&i.go&&i.go.indexOf("chat:")==0}).length,b=$("cbn");b.textContent=n>9?"9+":n;b.hidden=!n;$("chatb").setAttribute("aria-label",n?"Chats, "+n+" unread":"Chats")}
-function closeChats(){$("cpanel").hidden=true;$("chatb").setAttribute("aria-expanded","false")}
-async function chatList(){
- var el=$("clist"),note=function(t){el.innerHTML='<p class="meta" style="padding:18px;text-align:center">'+t+'</p>'};
- note("Loading...");
+$("chatb").onclick=function(){location.hash="#/chats"};
+function chatRowName(b){return b.customer_id==user.id?(NAMES[b.companion_id]||"A companion"):(CNAME[b.id]||"Customer")}
+async function loadChatRows(){
  var r=await sb.from("bookings").select("id,customer_id,companion_id,activity,starts_at,status").in("status",["accepted","paid","completed"]).order("starts_at",{ascending:false}).limit(50);
- if(r.error){note("Couldn't load chats.");return}
- var rows=r.data;if(!rows.length){note("No chats yet. A chat opens once a booking is accepted.");return}
- var mid=mine&&mine.id;
+ if(r.error){$("clistp").innerHTML='<p class="meta" style="padding:18px;text-align:center">Couldn\'t load chats.</p>';return false}
+ var rows=r.data,mid=mine&&mine.id;
  await nameFor(rows.filter(function(b){return b.customer_id==user.id}).map(function(b){return b.companion_id}));
  await Promise.all(rows.filter(function(b){return mid&&b.companion_id==mid&&!CNAME[b.id]}).map(function(b){return sb.rpc("booking_customer",{p_booking:b.id}).then(function(x){var d=x.data&&x.data[0];CNAME[b.id]=d&&d.first_name||"Customer"})}));
- var m=await sb.from("messages").select("booking_id,sender_id,body,created_at").in("booking_id",rows.map(function(b){return b.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
- var last={};(m.data||[]).forEach(function(x){if(!last[x.booking_id])last[x.booking_id]=x});
- rows.sort(function(a,b){var la=last[a.id]?+new Date(last[a.id].created_at):0,lb=last[b.id]?+new Date(last[b.id].created_at):0;return lb-la||new Date(b.starts_at)-new Date(a.starts_at)});
- var unread={};N.items.forEach(function(i){if(!i.read&&i.go&&i.go.indexOf("chat:")==0)unread[i.go.slice(5)]=1});
- el.innerHTML=rows.map(function(b){
-  var nm=b.customer_id==user.id?(NAMES[b.companion_id]||"A companion"):(CNAME[b.id]||"Customer"),act=ACTS[KEYS.indexOf(b.activity)]||b.activity,l=last[b.id];
-  var txt=l?(l.sender_id==user.id?"You: ":"")+String(l.body):"No messages yet \u00b7 "+act+" \u00b7 "+new Date(b.starts_at).toLocaleDateString([],{day:"numeric",month:"short"});
-  if(txt.length>60)txt=txt.slice(0,60)+"\u2026";
-  return '<button type="button" class="ni'+(unread[b.id]?' un':'')+'" data-id="'+esc(b.id)+'" data-n="'+esc(nm)+'"><span class="nic av">'+esc(nm[0].toUpperCase())+'</span><span class="nt"><b>'+esc(nm)+'</b><span>'+esc(txt)+'</span><small>'+(l?ago(+new Date(l.created_at)):esc(act))+'</small></span></button>'}).join("");
+ var last={};
+ if(rows.length){var m=await sb.from("messages").select("booking_id,sender_id,body,created_at").in("booking_id",rows.map(function(b){return b.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
+  (m.data||[]).forEach(function(x){if(!last[x.booking_id])last[x.booking_id]=x})}
+ rows.forEach(function(b){b.last=last[b.id]||null});
+ rows.sort(function(a,b){var la=a.last?+new Date(a.last.created_at):0,lb=b.last?+new Date(b.last.created_at):0;return lb-la||new Date(b.starts_at)-new Date(a.starts_at)});
+ CR=rows;return true;
 }
-$("chatb").onclick=function(e){
- e.stopPropagation();closePanel();var p=$("cpanel");if(!p.hidden){closeChats();return}
- var r=this.getBoundingClientRect(),w=Math.min(360,innerWidth-24);
- p.style.width=w+"px";p.style.top=Math.round(r.bottom+8)+"px";p.style.left=Math.max(12,Math.min(innerWidth-w-12,r.right-w))+"px";
- p.hidden=false;this.setAttribute("aria-expanded","true");chatList();
+function paintList(){
+ var el=$("clistp");if(!CR.length){el.innerHTML='<p class="meta" style="padding:18px;text-align:center">No chats yet. A chat opens once a booking is accepted.</p>';return}
+ var unread={};N.items.forEach(function(i){if(!i.read&&i.go&&i.go.indexOf("chat:")==0)unread[i.go.slice(5)]=1});
+ el.innerHTML=CR.map(function(b){
+  var nm=chatRowName(b),act=ACTS[KEYS.indexOf(b.activity)]||b.activity,l=b.last,on=!!ONL[b.id];
+  var txt=l?(l.sender_id==user.id?"You: ":"")+String(l.body):act+" \u00b7 "+new Date(b.starts_at).toLocaleDateString([],{day:"numeric",month:"short"});
+  if(txt.length>50)txt=txt.slice(0,50)+"\u2026";
+  return '<button type="button" role="listitem" class="ni'+(unread[b.id]?' un':'')+(b.id==CUR?' act':'')+'" data-id="'+esc(b.id)+'"><span class="avw2"><span class="nic av">'+esc(nm[0].toUpperCase())+'</span>'+(on?'<i class="pdot"></i>':'')+'</span><span class="nt"><b>'+esc(nm)+'</b><span>'+esc(txt)+'</span><small'+(on?' class="on"':'')+'>'+(on?'Online':(l?ago(+new Date(l.created_at)):''))+'</small></span></button>'}).join("");
+}
+function paintHead(){
+ var b=CR.filter(function(x){return x.id==CUR})[0];if(!b)return;var on=!!ONL[b.id];
+ $("cpdot").hidden=!on;var s=$("cpstat");s.textContent=on?"Online":"Offline";s.className=on?"on":"";
+}
+function chatsHome(){CUR="";$("cpg").dataset.open="";$("cpane").hidden=true;$("cempty").hidden=false;paintList()}
+async function selectChat(id){
+ var b=CR.filter(function(x){return x.id==id})[0];
+ if(!b){toast("That chat isn't available.");location.hash="#/chats";return}
+ CUR=id;var nm=chatRowName(b);
+ $("cpg").dataset.open="1";$("cempty").hidden=true;$("cpane").hidden=false;
+ $("cpname").textContent=nm;$("cpav").textContent=nm[0].toUpperCase();paintHead();paintList();
+ await openChat(id,nm,true);$("pcin").focus({preventScroll:true});
+}
+async function chatsPage(id){
+ if(!user||!sb)return;
+ if(!CR.length||!CR.some(function(x){return x.id==id})){if(!(await loadChatRows()))return}
+ presInit();
+ if(id)selectChat(id);else{chatStop();chatsHome()}
+}
+function chatsRefresh(now){clearTimeout(CT);CT=setTimeout(async function(){if(document.body.dataset.view!="chats"||!user)return;if(await loadChatRows())paintList()},now?0:800)}
+$("clistp").onclick=function(e){var b=e.target.closest(".ni");if(b)location.hash="#/chats/"+b.dataset.id};
+$("cback").onclick=function(){location.hash="#/chats"};
+$("pcreport").onclick=function(){if(cs.id)openReport(cs.id)};
+$("pcf").onsubmit=async function(e){
+ e.preventDefault();var t=$("pcin").value.trim();if(!t||!cs.id)return;
+ var btn=e.submitter;if(btn)btn.disabled=true;
+ var r=await sb.from("messages").insert({booking_id:cs.id,body:t}).select("id,sender_id,body,created_at").single();
+ if(btn)btn.disabled=false;
+ if(r.error){$("pcerr").textContent="Couldn't send. "+r.error.message;return}
+ $("pcerr").textContent="";$("pcin").value="";cs.seen[r.data.id]=r.data;cs.fresh=true;chatDraw();cs.fresh=false;$("pcin").focus();chatsRefresh();
 };
-$("cpanel").onclick=function(e){e.stopPropagation();var b=e.target.closest(".ni");if(!b)return;closeChats();nRead("chat:"+b.dataset.id);openChat(b.dataset.id,b.dataset.n)};
-document.addEventListener("click",function(e){if(!e.target.closest("#chatw"))closeChats()});
-document.addEventListener("keydown",function(e){if(e.key=="Escape")closeChats()});
-window.addEventListener("scroll",closeChats,{passive:true});window.addEventListener("resize",closeChats);
 
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
- var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h=="#/dashboard"?"dashboard":"home";
- if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
+ var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":"home";
+ if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
  var pv=document.body.dataset.view;document.body.dataset.view=v;
  if(pv!==v)window.scrollTo(0,0);
  if(v=="home"&&ANCH[h]){var t=document.getElementById(h.slice(1));if(t)t.scrollIntoView()}
  if(user)persist();
  if(v=="verify"&&pv!="verify")startVerify();
+ if(pv=="chats"&&v!="chats")chatStop();
+ if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();
  if(v=="dashboard")loadDash();
  if(v=="list"){renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}

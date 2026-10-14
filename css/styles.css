@@ -161,3 +161,36 @@ footer a{color:var(--accent2);font-weight:600}
 .frow>div{min-width:0}
 .ni .nic.av{background:var(--grad)}
 .ni.un .nt b::after{content:'';display:inline-block;width:8px;height:8px;margin-left:6px;border-radius:50%;background:var(--accent);vertical-align:middle}
+
+/* chats page */
+body:not([data-view="chats"]) .chv{display:none}
+body[data-view="chats"] #safety{display:none}
+.chv{padding:18px 0 40px}
+.cpg{display:grid;grid-template-columns:340px 1fr;height:min(78vh,720px);border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
+.cside{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.chead{padding:16px 18px;font:700 20px "Instrument Sans",system-ui,sans-serif;border-bottom:1px solid var(--line)}
+.clistp{overflow-y:auto;flex:1}
+.clistp .ni{align-items:center}
+.ni.act{background:rgba(224,21,95,.13)}
+.avw2{position:relative;flex:none;display:inline-flex}
+.pdot{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--panel)}
+.cmain{display:flex;flex-direction:column;min-width:0;min-height:0}
+.cempty{margin:auto;color:var(--mute);padding:24px;text-align:center}
+.cpane{display:flex;flex-direction:column;flex:1;min-height:0}
+.cph{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.cph .btn{padding:8px 14px;font-size:13px}
+.cph .tt{flex:1;min-width:0;display:flex;flex-direction:column}
+.cph small{color:var(--mute);font-size:13px}
+.cph small.on,.ni .nt small.on{color:#15803d;font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cph small.on,:root:not([data-theme="light"]) .ni .nt small.on{color:#4ade80}}
+:root[data-theme="dark"] .cph small.on,:root[data-theme="dark"] .ni .nt small.on{color:#4ade80}
+.cpane .cbox{flex:1;height:auto;min-height:0;margin:0;padding:16px}
+.cpane .vf{padding:12px 16px;border-top:1px solid var(--line)}
+.cback{display:none}
+@media(max-width:760px){
+ .cpg{grid-template-columns:1fr;height:calc(100dvh - 150px);min-height:420px}
+ .cpg[data-open="1"] .cside{display:none}
+ .cpg:not([data-open="1"]) .cmain{display:none}
+ .cback{display:inline-block}
+ #pcreport{display:none}
+}
