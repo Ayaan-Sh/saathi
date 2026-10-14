@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saathi – book a companion for garba, dinners and events</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+<div class="topbg"><div class="wrap">
+<nav><span class="logo">Saathi</span><div><a href="#browse">Find</a><a href="#/list">Become a companion</a><a href="#/bookings">My bookings</a><a href="#/verify">Verify ID</a><a href="#safety">Safety</a><span id="acct"></span></div></nav>
+
+<header class="hero home"><h1>Don't do garba alone.</h1><p>Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
+<div class="cta"><a class="btn white" href="#browse">Find a companion</a><a class="btn ghost" href="#/list">List yourself</a></div></header>
+</div></div>
+<div class="wrap">
+
+<main><div id="cfg" class="note" hidden style="margin-top:24px">Not connected yet. Paste your Supabase URL and anon key in js/config.js.</div>
+<section id="browse" class="home" style="padding-top:20px">
+<div class="seg" id="seg" role="group" aria-label="Who are you looking for"><button type="button" data-g="F" aria-pressed="false">Find a woman</button><button type="button" data-g="M" aria-pressed="false">Find a man</button><button type="button" data-g="" aria-pressed="true">Everyone</button></div>
+<div class="bar">
+<button class="btn" id="loc" type="button">Use my location</button>
+<select id="city" aria-label="City"><option>Pune</option><option>Mumbai</option><option>Ahmedabad</option><option>Vadodara</option><option>Surat</option></select>
+<select id="rad" aria-label="Distance" hidden><option value="5">Within 5 km</option><option value="10">Within 10 km</option><option value="25" selected>Within 25 km</option><option value="50">Within 50 km</option></select>
+<select id="gender" aria-label="Show" hidden><option value="">Show everyone</option><option value="F">Women</option><option value="M">Men</option></select>
+<select id="sort" aria-label="Sort"><option value="n" disabled>Nearest</option><option value="r" selected>Top rated</option><option value="p">Lowest price</option></select>
+</div>
+<p class="meta" id="locmsg"></p>
+<div class="chips" id="chips" role="group" aria-label="Activity"></div>
+<div class="rowhead"><h2>Online now</h2><span class="meta" id="oc"></span></div>
+<div class="orow" id="orow"></div>
+<div class="rowhead"><h2>Available to go out</h2><span class="meta" id="gc"></span></div>
+<div class="grid" id="grid"></div>
+</section>
+
+<section id="login" class="lgv"><div class="lgbox"><h2>Log in to Saathi</h2>
+<p class="meta" id="lgmsg" style="margin:10px 0 18px">Log in to pick up where you left off.</p>
+<button class="btn" id="gbtn" type="button" style="width:100%">Continue with Google</button>
+<p class="note" style="margin-top:18px">You must be 18 or older. Signing in does not prove your age, so every listing needs ID verification.</p></div></section>
+<section id="bookings" class="bkv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><h2>My bookings</h2><div id="bklist"></div></section>
+<section id="why" class="home"><h2>Why Saathi</h2>
+<p class="meta" style="max-width:52ch;margin-top:12px">Saathi means companion. We built it for the nights you want company, not a crowd.</p>
+<div class="why">
+<div><h3>Made for garba season</h3><p>Dandiya partners, wedding plus-ones and dinner company, booked by activity instead of guesswork.</p></div>
+<div><h3>Verified, every time</h3><p>Every companion passes an ID and selfie check, then a human review, before they appear as verified.</p></div>
+<div><h3>Both sides choose</h3><p>Companions accept or decline each request and set their own day or hourly rate. No one is ever assigned.</p></div>
+<div><h3>Safe by design</h3><p>Public venues only, escrow payments, live location sharing and a one-tap SOS during every booking.</p></div>
+<div><h3>Clear, fair pricing</h3><p>Book by the day or by the hour. The platform fee is shown before you send a request.</p></div>
+<div><h3>Near you</h3><p>Share your location and see who is available around you, sorted by distance.</p></div>
+</div></section>
+<section id="join" class="listv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div id="lstatus"></div>
+<div class="two">
+<div>
+<h2>List yourself as a companion</h2>
+<p style="color:var(--mute)">Set your own rate, activities and city. You approve every booking, and you can decline or block anyone, any time.</p>
+<div class="note" style="margin-top:14px">Listings go live after ID and selfie verification. This demo shows your profile instantly so you can see how it looks.</div>
+</div>
+<form id="form">
+<label for="pf">Your photo</label><input id="pf" type="file" accept="image/*"><img id="pv" alt="Your photo preview" hidden><p class="meta">Use a clear photo of yourself. It is matched against your selfie at verification.</p>
+<label for="n">Name</label><input id="n" required maxlength="40">
+<label for="a">Age</label><input id="a" type="number" min="18" max="80" required placeholder="18 or above">
+<label for="g">I am</label><select id="g"><option value="F">Woman</option><option value="M">Man</option></select>
+<label for="c">City</label><select id="c"><option>Pune</option><option>Mumbai</option><option>Ahmedabad</option><option>Vadodara</option><option>Surat</option></select>
+<label>Activities I offer</label><div class="checks" id="acts"></div>
+<div class="checks" style="margin-top:14px"><label><input type="checkbox" id="goout" checked> Available to go out</label></div>
+<label for="rd">Rate per day (₹)</label><input id="rd" type="number" min="500" max="50000" placeholder="e.g. 2500">
+<label for="r">Rate per hour (₹, optional)</label><input id="r" type="number" min="100" max="10000" placeholder="e.g. 400">
+<p class="meta">Set a day rate, an hourly rate, or both. Customers choose from what you offer.</p>
+<button class="btn alt" type="button" id="myloc" style="margin-top:12px">Use my location for my listing</button> <span class="meta" id="mylocmsg"></span>
+<label for="b">About you</label><textarea id="b" rows="3" maxlength="200" placeholder="Garba since age 6. Happy to teach basic steps."></textarea>
+<p class="meta">Companionship only. Any request beyond time and company is a violation and gets the account banned.</p>
+<button class="btn" type="submit">Create my listing</button>
+</form>
+</div>
+</section>
+
+<section id="verify" class="vw"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
+<h2>Verify your identity</h2>
+<p class="meta" style="max-width:56ch">An assistant guides you through age, ID and selfie checks. A human reviewer approves every application before you go live.</p>
+<div class="chat" id="chat" aria-live="polite"></div><div class="reply" id="reply"></div></section>
+
+<section id="safety">
+<h2 style="margin-bottom:18px">Built so both sides feel safe</h2>
+<div class="safe">
+<div><b>Public venues only</b>Every booking happens at a garba ground, café, restaurant or event hall.</div>
+<div><b>Verified profiles</b>18+ with ID and selfie check before a listing goes live.</div>
+<div><b>Escrow payments</b>Money is released after the booking. No cash, no off-app deals.</div>
+<div><b>SOS and live location</b>One tap alerts a trusted contact and our team during a booking.</div>
+</div>
+</section>
+</main>
+<footer>Saathi is a companionship service for time and company only. Payments are not live yet.</footer>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="bk"></form></dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
