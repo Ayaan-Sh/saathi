@@ -155,3 +155,9 @@ footer a{color:var(--accent2);font-weight:600}
 .legal p,.legal li{max-width:70ch;color:var(--ink)}
 .legal ul{padding-left:20px}
 .legal .warn{margin:18px 0}
+/* profile form rows, chat list */
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.frow.na{grid-template-columns:2fr 1fr}
+.frow>div{min-width:0}
+.ni .nic.av{background:var(--grad)}
+.ni.un .nt b::after{content:'';display:inline-block;width:8px;height:8px;margin-left:6px;border-radius:50%;background:var(--accent);vertical-align:middle}

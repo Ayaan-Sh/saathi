@@ -458,6 +458,7 @@ function ring(){
 }
 function banner(it){var b=$("nbanner");b.innerHTML='<b>'+esc(it.title)+'</b><span>'+esc(it.text)+'</span>';b.dataset.go=it.id;b.className="nbanner show "+it.kind;clearTimeout(b._t);b._t=setTimeout(function(){b.className="nbanner"},5000)}
 function nRender(){
+ chatBadge();
  var un=N.items.filter(function(i){return !i.read}).length,bn=$("bn");
  bn.textContent=un>9?"9+":un;bn.hidden=!un;
  $("bell").setAttribute("aria-label",un?"Notifications, "+un+" unread":"Notifications");
@@ -507,6 +508,7 @@ async function nPoll(){
 async function notifStart(){
  notifStop();if(!sb||!user)return;var me=user.id;
  $("bellw").hidden=false;
+ $("chatw").hidden=false;
  var st=null;try{st=JSON.parse(localStorage.getItem(nKey()))}catch(e){}
  N.items=(st&&st.items)||[];N.keys={};((st&&st.keys)||[]).forEach(function(k){N.keys[k]=1});
  try{N.sound=localStorage.getItem("saathi_sound")!="0"}catch(e){}
@@ -523,11 +525,11 @@ async function notifStart(){
 }
 function notifStop(){
  if(N.ch&&sb)sb.removeChannel(N.ch);clearInterval(N.poll);N.ch=null;N.items=[];N.keys={};N.loud=false;
- $("bellw").hidden=true;closePanel();nRender();
+ $("bellw").hidden=true;$("chatw").hidden=true;closePanel();closeChats();nRender();
 }
 function closePanel(){$("npanel").hidden=true;$("bell").setAttribute("aria-expanded","false")}
 $("bell").onclick=function(e){
- e.stopPropagation();var p=$("npanel");if(!p.hidden){closePanel();return}
+ e.stopPropagation();closeChats();var p=$("npanel");if(!p.hidden){closePanel();return}
  var r=this.getBoundingClientRect(),w=Math.min(360,innerWidth-24);
  p.style.width=w+"px";p.style.top=Math.round(r.bottom+8)+"px";p.style.left=Math.max(12,Math.min(innerWidth-w-12,r.right-w))+"px";
  p.hidden=false;this.setAttribute("aria-expanded","true");
@@ -541,6 +543,40 @@ document.addEventListener("click",function(e){if(!e.target.closest("#bellw"))clo
 document.addEventListener("keydown",function(e){if(e.key=="Escape")closePanel()});
 window.addEventListener("scroll",closePanel,{passive:true});window.addEventListener("resize",closePanel);
 document.addEventListener("visibilitychange",function(){if(document.visibilityState=="visible"&&user)nPoll()});
+
+/* ---------- chat list ---------- */
+var CNAME={};
+function chatBadge(){var n=N.items.filter(function(i){return !i.read&&i.go&&i.go.indexOf("chat:")==0}).length,b=$("cbn");b.textContent=n>9?"9+":n;b.hidden=!n;$("chatb").setAttribute("aria-label",n?"Chats, "+n+" unread":"Chats")}
+function closeChats(){$("cpanel").hidden=true;$("chatb").setAttribute("aria-expanded","false")}
+async function chatList(){
+ var el=$("clist"),note=function(t){el.innerHTML='<p class="meta" style="padding:18px;text-align:center">'+t+'</p>'};
+ note("Loading...");
+ var r=await sb.from("bookings").select("id,customer_id,companion_id,activity,starts_at,status").in("status",["accepted","paid","completed"]).order("starts_at",{ascending:false}).limit(50);
+ if(r.error){note("Couldn't load chats.");return}
+ var rows=r.data;if(!rows.length){note("No chats yet. A chat opens once a booking is accepted.");return}
+ var mid=mine&&mine.id;
+ await nameFor(rows.filter(function(b){return b.customer_id==user.id}).map(function(b){return b.companion_id}));
+ await Promise.all(rows.filter(function(b){return mid&&b.companion_id==mid&&!CNAME[b.id]}).map(function(b){return sb.rpc("booking_customer",{p_booking:b.id}).then(function(x){var d=x.data&&x.data[0];CNAME[b.id]=d&&d.first_name||"Customer"})}));
+ var m=await sb.from("messages").select("booking_id,sender_id,body,created_at").in("booking_id",rows.map(function(b){return b.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
+ var last={};(m.data||[]).forEach(function(x){if(!last[x.booking_id])last[x.booking_id]=x});
+ rows.sort(function(a,b){var la=last[a.id]?+new Date(last[a.id].created_at):0,lb=last[b.id]?+new Date(last[b.id].created_at):0;return lb-la||new Date(b.starts_at)-new Date(a.starts_at)});
+ var unread={};N.items.forEach(function(i){if(!i.read&&i.go&&i.go.indexOf("chat:")==0)unread[i.go.slice(5)]=1});
+ el.innerHTML=rows.map(function(b){
+  var nm=b.customer_id==user.id?(NAMES[b.companion_id]||"A companion"):(CNAME[b.id]||"Customer"),act=ACTS[KEYS.indexOf(b.activity)]||b.activity,l=last[b.id];
+  var txt=l?(l.sender_id==user.id?"You: ":"")+String(l.body):"No messages yet \u00b7 "+act+" \u00b7 "+new Date(b.starts_at).toLocaleDateString([],{day:"numeric",month:"short"});
+  if(txt.length>60)txt=txt.slice(0,60)+"\u2026";
+  return '<button type="button" class="ni'+(unread[b.id]?' un':'')+'" data-id="'+esc(b.id)+'" data-n="'+esc(nm)+'"><span class="nic av">'+esc(nm[0].toUpperCase())+'</span><span class="nt"><b>'+esc(nm)+'</b><span>'+esc(txt)+'</span><small>'+(l?ago(+new Date(l.created_at)):esc(act))+'</small></span></button>'}).join("");
+}
+$("chatb").onclick=function(e){
+ e.stopPropagation();closePanel();var p=$("cpanel");if(!p.hidden){closeChats();return}
+ var r=this.getBoundingClientRect(),w=Math.min(360,innerWidth-24);
+ p.style.width=w+"px";p.style.top=Math.round(r.bottom+8)+"px";p.style.left=Math.max(12,Math.min(innerWidth-w-12,r.right-w))+"px";
+ p.hidden=false;this.setAttribute("aria-expanded","true");chatList();
+};
+$("cpanel").onclick=function(e){e.stopPropagation();var b=e.target.closest(".ni");if(!b)return;closeChats();nRead("chat:"+b.dataset.id);openChat(b.dataset.id,b.dataset.n)};
+document.addEventListener("click",function(e){if(!e.target.closest("#chatw"))closeChats()});
+document.addEventListener("keydown",function(e){if(e.key=="Escape")closeChats()});
+window.addEventListener("scroll",closeChats,{passive:true});window.addEventListener("resize",closeChats);
 
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
