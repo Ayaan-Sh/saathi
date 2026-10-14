@@ -5,15 +5,19 @@ var CITY={Pune:[18.5204,73.8567],Mumbai:[19.076,72.8777],Ahmedabad:[23.0225,72.5
 var PHS=["linear-gradient(135deg,#ec1d6b,#ff5a2e)","linear-gradient(135deg,#7c3aed,#ec1d6b)","linear-gradient(135deg,#ff5a2e,#ffb347)"];
 var configured=SUPABASE_URL.indexOf("YOUR-PROJECT")<0&&SUPABASE_ANON_KEY.indexOf("YOUR-ANON")<0;
 var sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{flowType:"pkce"}}):null;
-var user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={};
+var user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={},HIDDEN=[],NAMES={},PAGE=24,shown=24,stateLoaded=false,authId,rs={};
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function inr(n){return "₹"+Number(n).toLocaleString("en-IN")}
 function pubUrl(p){return sb.storage.from("profile-photos").getPublicUrl(p).data.publicUrl}
 function toast(t){var x=$("toast");x.textContent=t;x.style.display="block";clearTimeout(x._t);x._t=setTimeout(function(){x.style.display="none"},4000)}
 function getLoc(cb){if(!navigator.geolocation){toast("This browser can't share location. Pick your city instead.");return}
  navigator.geolocation.getCurrentPosition(function(p){cb(p.coords.latitude,p.coords.longitude)},function(){toast("Location is blocked. Allow it in your browser, or pick your city.")},{timeout:9000})}
-function blobOf(file,maxW){return createImageBitmap(file,{imageOrientation:"from-image"}).then(function(b){var w=Math.min(maxW,b.width),h=Math.round(b.height*w/b.width),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(b,0,0,w,h);return new Promise(function(res){c.toBlob(res,"image/webp",0.82)})})}
+function bmp(f){return createImageBitmap(f,{imageOrientation:"from-image"}).catch(function(){return createImageBitmap(f)})}
+function blobOf(file,maxW){return bmp(file).then(function(b){var w=Math.min(maxW,b.width),h=Math.round(b.height*w/b.width),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(b,0,0,w,h);if(b.close)b.close();return new Promise(function(res,rej){c.toBlob(function(x){if(x&&x.type=="image/webp")return res(x);c.toBlob(function(y){y?res(y):rej(new Error("Couldn't process that image"))},"image/jpeg",0.85)},"image/webp",0.82)})})}
+function extOf(b){return b.type=="image/webp"?"webp":"jpg"}
 function loadImg(f,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){cb(im)};im.onerror=function(){cb(null)};im.src=fr.result};fr.readAsDataURL(f)}
+async function nameFor(ids){var need=ids.filter(function(i,ix,a){return i&&!NAMES[i]&&a.indexOf(i)==ix});if(!need.length||!sb)return;var r=await sb.from("public_companions").select("id,name").in("id",need);(r.data||[]).forEach(function(x){NAMES[x.id]=x.name})}
+async function loadHidden(){HIDDEN=[];if(!user||!sb)return;var r=await sb.rpc("hidden_companions");HIDDEN=r.error?[]:(r.data||[])}
 
 /* ---------- data ---------- */
 function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,out:r.available_out!==false,d:r.distance_km,extra:[]}}
@@ -21,22 +25,22 @@ async function load(){
  if(!sb){renderOnline();renderGrid();return}
  var my=++token,g=$("gender").value||null,a=active>-1?KEYS[active]:null,res;
  try{
-  if(loc){var r=await sb.rpc("nearby_companions",{p_lat:loc.lat,p_lng:loc.lng,p_radius_km:+$("rad").value,p_gender:g,p_activity:a});if(r.error)throw r.error;res=r.data}
-  else{var q=sb.from("public_companions").select("*").eq("city",$("city").value);if(g)q=q.eq("gender",g);if(a)q=q.contains("activities",[a]);var r2=await q;if(r2.error)throw r2.error;res=r2.data}
+  if(loc){var r=await sb.rpc("nearby_companions",{p_lat:loc.lat,p_lng:loc.lng,p_radius_km:+$("rad").value,p_gender:g,p_activity:a}).limit(200);if(r.error)throw r.error;res=r.data}
+  else{var q=sb.from("public_companions").select("*").eq("city",$("city").value);if(g)q=q.eq("gender",g);if(a)q=q.contains("activities",[a]);var r2=await q.limit(200);if(r2.error)throw r2.error;res=r2.data}
  }catch(e){if(my==token)toast("Couldn't load companions. "+(e.message||""));return}
  if(my!=token)return;
  var s=$("sort").value,pr=function(p){return p.day||p.hr*8};
- DATA=res.map(norm);DATA.sort(function(a,b){return s=="n"&&loc?a.d-b.d:s=="p"?pr(a)-pr(b):b.rt-a.rt});
+ DATA=res.filter(function(r){return HIDDEN.indexOf(r.id)<0}).map(norm);shown=PAGE;DATA.forEach(function(p){NAMES[p.id]=p.n});DATA.sort(function(a,b){return s=="n"&&loc?a.d-b.d:s=="p"?pr(a)-pr(b):b.rt-a.rt});
  renderOnline();renderGrid();loadExtras();
 }
 function ph(p,cls){var nm=esc(p.n);return p.photo?'<img class="'+cls+'" src="'+esc(p.photo)+'" alt="'+(cls=="ph"?'Photo of '+nm:'')+'">':'<div class="'+cls+'" style="background:'+PHS[String(p.id).charCodeAt(0)%3]+'">'+esc(p.n[0].toUpperCase())+'</div>'}
-function where(p){return loc&&p.d!=null?(p.d<1?'Under 1':Math.round(p.d))+' km away':esc(p.c)}
+function where(p){return loc&&p.d!=null?(p.d<2?'Within 2 km':'Within '+Math.ceil(p.d/5)*5+' km'):esc(p.c)}
 function renderOnline(){
  var l=DATA.filter(function(p){return p.online});$("oc").textContent=l.length+" online";
  $("orow").innerHTML=l.length?l.map(function(p){return '<button class="oc" type="button" data-id="'+esc(p.id)+'"><span class="avw">'+ph(p,"oav")+'<i class="dotg"></i></span><b>'+esc(p.n)+'</b><span class="meta">'+where(p)+'</span></button>'}).join(""):'<div class="empty" style="width:100%">Nobody is online in this view right now.</div>';
 }
 function renderGrid(){
- var l=DATA.filter(function(p){return p.out}),el=$("grid");$("gc").textContent=l.length+" available";
+ var all=DATA.filter(function(p){return p.out}),l=all.slice(0,shown),el=$("grid");$("gc").textContent=all.length+" available";$("more").hidden=all.length<=shown;$("more").textContent="Show more ("+Math.max(0,all.length-shown)+" more)";
  if(!l.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(configured?(loc?'No one nearby yet. Widen the distance, or list yourself.':'No companions in this city yet. Try another city or activity, or list yourself.'):'Add your Supabase URL and anon key to see companions.')+'</div>';return}
  el.innerHTML=l.map(function(p){
   var price=(p.day?'<b>'+inr(p.day)+'</b> /day':'')+(p.day&&p.hr?'<br>':'')+(p.hr?(p.day?'<span class="meta">':'<b>')+inr(p.hr)+(p.day?'</span>':'</b>')+' /hr':'');
@@ -46,6 +50,7 @@ function renderGrid(){
   +'<div class="meta">'+esc(p.b)+'</div>'+(p.extra&&p.extra.length?'<button class="more" type="button" data-ph="'+esc(p.id)+'">See all photos ('+(p.extra.length+(p.photo?1:0))+')</button>':'')
   +'<div class="price"><span>'+price+'</span><button class="btn" data-id="'+esc(p.id)+'">Request</button></div></div></article>'}).join("");
 }
+$("more").onclick=function(){shown+=PAGE;renderGrid()};
 $("grid").onclick=$("orow").onclick=function(e){var g=e.target.closest("button[data-ph]");if(g){showPhotos(g.dataset.ph);return}var b=e.target.closest("button[data-id]");if(b)openBook(b.dataset.id)};
 
 /* ---------- filters ---------- */
@@ -75,7 +80,7 @@ $("gbtn").onclick=function(){if(!sb){toast("Add your Supabase URL and anon key f
  sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}})};
 function needLogin(m){nextHash=location.hash||"#/";$("lgmsg").textContent=m;location.hash="#/login"}
 function persist(){
- if(!user||!sb)return;
+ if(!user||!sb||!stateLoaded)return;
  prefs.city=$("city").value;prefs.gender=$("gender").value;prefs.rad=$("rad").value;prefs.sort=$("sort").value;prefs.active=active;
  if(location.hash!="#/login")prefs.hash=location.hash;
  clearTimeout(saveT);saveT=setTimeout(function(){var d=prefs.draft||{},p=Object.assign({},prefs);delete p.draft;
@@ -83,15 +88,15 @@ function persist(){
 }
 function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(prefs[k]!=null)$(k).value=prefs[k]});
  active=typeof prefs.active=="number"?prefs.active:-1;if($("sort").value=="n"&&!loc)$("sort").value="r";setSeg();renderChips()}
-async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();mine=r.data||null;renderStatus();updateNav();refreshBadge()}
-function ping(){if(user&&document.visibilityState=="visible"){sb.rpc("touch_presence");refreshBadge()}}
+async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();if(r.error)throw r.error;mine=r.data||null;renderStatus();updateNav();refreshBadge()}
+function ping(){if(user&&document.visibilityState=="visible"){if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
- user=u;renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
+ user=u;stateLoaded=false;HIDDEN=[];renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
  if(u){try{
   try{var nx=sessionStorage.getItem("saathi_next");if(nx){nextHash=nx;sessionStorage.removeItem("saathi_next")}}catch(e){}
   await loadMine();
   var st=await sb.from("user_state").select("prefs,draft").eq("user_id",u.id).maybeSingle();
-  prefs=(st.data&&st.data.prefs)||{};prefs.draft=(st.data&&st.data.draft&&Object.keys(st.data.draft).length)?st.data.draft:null;
+  if(st.error)throw st.error;await loadHidden();if(!user||user.id!=u.id)return;prefs=(st.data&&st.data.prefs)||{};stateLoaded=true;prefs.draft=(st.data&&st.data.draft&&Object.keys(st.data.draft).length)?st.data.draft:null;
   applyPrefs();presT=setInterval(ping,120000);ping();notifStart();
   var fromLogin=location.hash=="#/login";
   if(nextHash){var go=nextHash;nextHash="";location.hash=go}
@@ -127,7 +132,7 @@ $("form").onsubmit=async function(e){
  var btn=e.submitter;if(btn)btn.disabled=true;
  try{
   var path=mine&&mine.photo_path,oldPath=path;
-  if(photo){path=user.id+"/"+crypto.randomUUID()+".webp";var up=await sb.storage.from("profile-photos").upload(path,photo,{contentType:"image/webp"});if(up.error)throw up.error}
+  if(photo){path=user.id+"/"+crypto.randomUUID()+"."+extOf(photo);var up=await sb.storage.from("profile-photos").upload(path,photo,{contentType:photo.type});if(up.error)throw up.error}
   var c=$("c").value,o=CITY[c],pt=myLoc||{lat:o[0],lng:o[1]};
   var row={name:$("n").value.trim(),age:age,gender:$("g").value,city:c,bio:$("b").value.trim()||null,activities:sel,rate_hour:hr,rate_day:day,available_out:$("goout").checked,photo_path:path,location:"SRID=4326;POINT("+pt.lng+" "+pt.lat+")"};
   var r=mine?await sb.from("companions").update(row).eq("id",mine.id).select().single():await sb.from("companions").insert(Object.assign({user_id:user.id},row)).select().single();
@@ -141,11 +146,14 @@ $("form").onsubmit=async function(e){
  if(btn)btn.disabled=false;
 };
 
+$("showon").onchange=function(){prefs.showOnline=this.checked;persist();if(!mine)return;if(this.checked)ping();else sb.from("companions").update({last_seen:null}).eq("id",mine.id).then(function(){load()})};
+
 /* ---------- booking ---------- */
 function openBook(id){
  if(!user){needLogin("Log in to send a booking request.");return}
  var p=DATA.filter(function(x){return String(x.id)==id})[0];if(!p)return;
  if(mine&&mine.id==p.id){toast("That's your own listing.");return}
+ if(!p.acts.length){toast(p.n+" hasn't chosen any activities yet.");return}
  var d=$("dlg"),f=$("bk"),m=[];
  if(p.day)m.push('<option value="day">Per day ('+inr(p.day)+')</option>');
  if(p.hr)m.push('<option value="hour">Per hour ('+inr(p.hr)+')</option>');
@@ -155,33 +163,68 @@ function openBook(id){
  +'<label for="bd">Start date and time</label><input id="bd" type="datetime-local" required>'
  +'<div id="hw"><label for="bh">Hours</label><select id="bh"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>'
  +'<label for="bv">Public venue</label><input id="bv" required minlength="3" placeholder="e.g. Koregaon Park garba ground" maxlength="80">'
- +'<p class="meta" id="bt"></p><p class="note">'+esc(p.n)+' can accept or decline. A day booking covers up to 10 hours. Payments are not live yet, so nothing is charged.</p>'
+ +'<label class="chk"><input type="checkbox" id="bpub" required> This is a public place, not a home, hotel or private room</label>'
+ +'<p class="meta" id="bt"></p><p class="note">'+esc(p.n)+' can accept or decline. A day booking covers up to 10 hours. Payments are not live yet, so nothing is charged. Never send money outside Saathi.</p>'
  +'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send request</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div>';
+ var mn=new Date(Date.now()+36e5);$("bd").min=new Date(mn-mn.getTimezoneOffset()*6e4).toISOString().slice(0,16);
  var upd=function(){var day=$("bm").value=="day";$("hw").style.display=day?"none":"block";var t=day?p.day:p.hr*(+$("bh").value);$("bt").textContent=inr(t)+" + "+inr(Math.round(t*0.1))+" platform fee = "+inr(t+Math.round(t*0.1))};
  $("bm").onchange=upd;$("bh").onchange=upd;upd();
  f.onsubmit=async function(e){
   e.preventDefault();if(!e.submitter||e.submitter.value!="ok"){d.close();return}
-  var mode=$("bm").value;e.submitter.disabled=true;
-  var r=await sb.from("bookings").insert({companion_id:p.id,activity:KEYS[ACTS.indexOf($("ba").value)],mode:mode,starts_at:new Date($("bd").value).toISOString(),hours:mode=="hour"?+$("bh").value:null,venue:$("bv").value.trim()});
-  if(r.error){toast("Couldn't send the request. "+r.error.message);e.submitter.disabled=false;return}
-  d.close();toast("Request sent to "+p.n+". You'll see their answer under My bookings.");
+  var t=new Date($("bd").value);if(isNaN(t)||t.getTime()<Date.now()+30*60000){toast("Pick a start time at least 30 minutes from now.");return}
+  var mode=$("bm").value,sbn=e.submitter;sbn.disabled=true;
+  try{
+   var r=await sb.from("bookings").insert({companion_id:p.id,activity:KEYS[ACTS.indexOf($("ba").value)],mode:mode,starts_at:t.toISOString(),hours:mode=="hour"?+$("bh").value:null,venue:$("bv").value.trim()});
+   if(r.error){toast("Couldn't send the request. "+r.error.message);return}
+   d.close();toast("Request sent to "+p.n+". You'll see their answer under My bookings.");
+  }catch(err){toast("Couldn't send the request. "+(err.message||"Try again."))}
+  finally{sbn.disabled=false}
  };
  d.showModal();
 }
 async function loadBookings(){
  var el=$("bklist");el.innerHTML='<p class="meta">Loading...</p>';
- var r=await sb.from("bookings").select("*").order("created_at",{ascending:false});
+ var r=await sb.from("bookings").select("*").eq("customer_id",user.id).order("created_at",{ascending:false});
  if(r.error){el.innerHTML='<p class="meta">Couldn\'t load bookings.</p>';return}
- var ids=r.data.map(function(b){return b.companion_id}).filter(function(x,i,a){return a.indexOf(x)==i}),names={};
- if(ids.length){var n=await sb.from("public_companions").select("id,name").in("id",ids);(n.data||[]).forEach(function(x){names[x.id]=x.name})}
- el.innerHTML=r.data.length?r.data.map(function(b){
-  var inc=mine&&b.companion_id==mine.id,act=ACTS[KEYS.indexOf(b.activity)]||b.activity;
-  var btns=inc&&b.status=="requested"?'<button class="btn" data-b="'+esc(b.id)+'" data-s="accepted">Accept</button> <button class="btn alt" data-b="'+esc(b.id)+'" data-s="declined">Reject</button>':!inc&&(b.status=="requested"||b.status=="accepted")?'<button class="btn alt" data-b="'+esc(b.id)+'" data-s="cancelled">Cancel request</button>':'';
-  return '<div class="bk"><h3>'+(inc?'Request from a customer':'Your request to '+esc(names[b.companion_id]||'a companion'))+'</h3><p class="meta">'+esc(act)+' · '+new Date(b.starts_at).toLocaleString()+' · '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' · '+inr(b.amount_paise/100)+' + '+inr(b.fee_paise/100)+' fee</p><p><b>Status: '+esc(b.status)+'</b>'+(b.status=="accepted"?' (payment is not live yet)':'')+'</p>'+btns+(b.status=="accepted"?'<button class="btn" data-chat="'+esc(b.id)+'" data-t="'+esc(act)+'">Chat</button>':'')+'</div>'}).join(""):'<div class="empty">No bookings yet.</div>';
+ await nameFor(r.data.map(function(b){return b.companion_id}));
+ var note=mine?'<p class="meta" style="max-width:56ch">Requests that people send you are in your <a href="#/dashboard" style="color:var(--accent2);font-weight:700">Dashboard</a>.</p>':'';
+ el.innerHTML=note+(r.data.length?r.data.map(function(b){
+  var act=ACTS[KEYS.indexOf(b.activity)]||b.activity,nm=NAMES[b.companion_id]||'a companion',when=new Date(b.starts_at).toLocaleString();
+  var btns=(b.status=="requested"||b.status=="accepted")?'<button class="btn alt" data-b="'+esc(b.id)+'" data-s="cancelled">Cancel request</button>':'';
+  var share="I'm meeting "+nm+" for "+act+" at "+b.venue+" on "+when+". Booked on Saathi.";
+  return '<div class="bk"><h3>Your request to '+esc(nm)+'</h3><p class="meta">'+esc(act)+' \u00b7 '+when+' \u00b7 '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' \u00b7 '+inr(b.amount_paise/100)+' + '+inr(b.fee_paise/100)+' fee</p><p><b>Status: '+esc(b.status)+'</b>'+(b.status=="accepted"?' (payment is not live yet)':'')+'</p>'+btns+(b.status=="accepted"?'<button class="btn" data-chat="'+esc(b.id)+'" data-t="'+esc(act)+'">Chat</button>':'')+(b.status=="requested"||b.status=="accepted"?srow(b,share,b.status=="accepted"):'')+'</div>'}).join(""):'<div class="empty">No bookings yet.</div>');
 }
-$("bklist").onclick=async function(e){var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}var b=e.target.closest("button[data-b]");if(!b)return;b.disabled=true;
- var r=await sb.from("bookings").update({status:b.dataset.s}).eq("id",b.dataset.b);
- if(r.error)toast("Couldn't update. "+r.error.message);loadBookings()};
+$("bklist").onclick=async function(e){
+ if(safety(e))return;
+ var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}
+ var b=e.target.closest("button[data-b]");if(!b)return;
+ if(!confirm("Cancel this request?"))return;b.disabled=true;
+ var r=await sb.from("bookings").update({status:b.dataset.s}).eq("id",b.dataset.b).eq("customer_id",user.id).select("id");
+ if(r.error)toast("Couldn't update. "+r.error.message);
+ loadBookings()};
+
+/* ---------- safety tools: share, emergency, report/block ---------- */
+function srow(b,txt,accepted){return '<div class="srow">'+(accepted?'<button class="btn alt" type="button" data-sh="'+esc(txt)+'">Share with a friend</button><a class="btn alt" href="tel:112">Emergency: call 112</a>':'')+'<button class="more" type="button" data-report="'+esc(b.id)+'">Report or block</button></div>'}
+function safety(e){
+ var s=e.target.closest("button[data-sh]");
+ if(s){var t=s.dataset.sh;
+  if(navigator.share)navigator.share({text:t}).catch(function(){});
+  else if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){toast("Copied. Paste it to a friend you trust.")},function(){toast("Couldn't copy the details.")});
+  else toast("Sharing isn't supported on this browser.");
+  return true}
+ var r=e.target.closest("button[data-report]");if(r){openReport(r.dataset.report);return true}
+ return false}
+function openReport(id){rs={id:id};$("rwhy").value="";$("rblock").checked=true;$("rerr").textContent="";$("rdlg").showModal()}
+$("rform").onsubmit=async function(e){
+ e.preventDefault();var sub=e.submitter;if(!sub||sub.value!="ok"){$("rdlg").close();return}
+ sub.disabled=true;var blk=$("rblock").checked;
+ var r=await sb.rpc("report_booking",{p_booking:rs.id,p_reason:$("rwhy").value,p_block:blk});
+ sub.disabled=false;
+ if(r.error){$("rerr").textContent=r.error.message;return}
+ $("rdlg").close();if($("cdlg").open)$("cdlg").close();
+ toast("Thanks. Our team will review your report."+(blk?" This person can no longer contact you.":""));
+ await loadHidden();var v=document.body.dataset.view;if(v=="dashboard")loadDash();else if(v=="bookings")loadBookings();else load()};
+$("rdlg").addEventListener("click",function(e){if(e.target==this)this.close()});
 
 /* ---------- ID verification chat ---------- */
 function say(t,w){var d=document.createElement("div");d.className="msg "+(w||"bot");d.textContent=t;$("chat").appendChild(d);d.scrollIntoView({block:"nearest"})}
@@ -194,8 +237,8 @@ function startVerify(){
  if(!mine){say("Create your listing first, then come back here to verify.");$("reply").innerHTML='<a class="btn" href="#/list" style="text-decoration:none;display:inline-block">Create a listing</a>';return}
  if(mine.status=="verified"){say("You're already verified and live.");done();return}
  if(mine.status=="review"){say("Your documents are already with a reviewer. We'll let you know once they're approved.");done();return}
- say("Hi "+mine.name+". I'll collect your age, ID and a selfie, which takes about three minutes. A human reviewer checks everything before you go live.");
- choices(["Start"],s1)
+ say("Hi "+mine.name+". I'll collect your age, ID and a selfie, which takes about three minutes. A human reviewer checks everything before you go live. By continuing you agree that Saathi may use your ID and selfie only to verify you, as described in the Privacy Policy.");
+ choices(["I agree and start"],s1)
 }
 function s1(){say("First, your date of birth. You must be 18 or older.");
  ask('<input type="date" required aria-label="Date of birth">',function(v){var a=age(v.value);if(isNaN(a))return;say(v.value,"me");$("reply").innerHTML="";
@@ -214,17 +257,17 @@ function s3(){say("Type your full name exactly as printed on the ID.");
   s4()})}
 function s4(){say("Upload a clear photo of the front of your "+vs.idName+". All four corners visible, no glare.");
  ask('<input type="file" accept="image/*" required aria-label="ID photo">',function(v){var f=v.files[0];if(!f)return;$("reply").innerHTML="";say("ID photo selected.","me");
-  loadImg(f,function(im){if(!im||im.width<600||im.height<400){say("I can't read that. Retake it closer, in good light, as a JPG or PNG.");s4();return}
-   vs.idFile=f;say("That's readable. Next, a selfie.");s5()})})}
+  loadImg(f,function(im){if(!im||im.width<600||im.height<400){say("That photo is too small, or isn't an image. Retake it closer, in good light, as a JPG or PNG.");s4();return}
+   vs.idFile=f;say("Got it. A reviewer will check it. Next, a selfie.");s5()})})}
 function s5(){say("Last step. Take a selfie facing the camera in good light, without sunglasses or filters.");
  ask('<input type="file" accept="image/*" capture="user" required aria-label="Selfie">',function(v){var f=v.files[0];if(!f)return;$("reply").innerHTML="";say("Selfie selected.","me");
-  loadImg(f,function(im){if(!im||im.width<300){say("I can't see your face clearly. Try again in better light.");s5();return}vs.selfieFile=f;finish()})})}
+  loadImg(f,function(im){if(!im||im.width<300){say("That photo is too small, or isn't an image. Try again in better light.");s5();return}vs.selfieFile=f;finish()})})}
 async function finish(){
  say("Uploading your documents securely...");
  try{
-  var ip=user.id+"/id-"+crypto.randomUUID()+".webp",sp=user.id+"/selfie-"+crypto.randomUUID()+".webp";
-  var u1=await sb.storage.from("kyc-private").upload(ip,await blobOf(vs.idFile,1600),{contentType:"image/webp"});if(u1.error)throw u1.error;
-  var u2=await sb.storage.from("kyc-private").upload(sp,await blobOf(vs.selfieFile,1600),{contentType:"image/webp"});if(u2.error)throw u2.error;
+  var ib=await blobOf(vs.idFile,1600),sb2=await blobOf(vs.selfieFile,1600),ip=user.id+"/id-"+crypto.randomUUID()+"."+extOf(ib),sp=user.id+"/selfie-"+crypto.randomUUID()+"."+extOf(sb2);
+  var u1=await sb.storage.from("kyc-private").upload(ip,ib,{contentType:ib.type});if(u1.error)throw u1.error;
+  var u2=await sb.storage.from("kyc-private").upload(sp,sb2,{contentType:sb2.type});if(u2.error)throw u2.error;
   var k=await sb.from("kyc_submissions").insert({user_id:user.id,id_type:vs.id,dob:vs.dob,id_image_path:ip,selfie_path:sp});if(k.error)throw k.error;
   vs={};await loadMine();
   say("You're submitted. A human reviewer checks every application, usually within 24 hours, and your listing goes live once approved.");done();
@@ -232,7 +275,7 @@ async function finish(){
 }
 
 /* ---------- nav, photos, dashboard ---------- */
-function updateNav(){var has=!!(user&&mine);$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+function updateNav(){var has=!!(user&&mine);$("verlink").hidden=!has;$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
 async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
 async function loadExtras(){
  if(!sb||!DATA.length)return;var my=token;
@@ -252,7 +295,7 @@ $("pclose").onclick=function(){$("pdlg").close()};
 /* edit profile + extra photos */
 var gal=[];
 function listMode(){
- var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;
+ var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;var lk=ed&&mine.status=="verified";["pf","n","g"].forEach(function(k){$(k).disabled=lk});$("lockmsg").hidden=!lk;$("showwrap").hidden=!ed;$("showon").checked=prefs.showOnline!==false;
  if(ed&&mine.photo_path&&!photo){$("pv").src=pubUrl(mine.photo_path);$("pv").hidden=false}
  if(ed)renderGal();
 }
@@ -272,8 +315,8 @@ $("gf").onchange=async function(){
  $("gadd").disabled=true;var fail=0;
  for(var i=0;i<files.length;i++){
   try{
-   var b=await blobOf(files[i],1000),p=user.id+"/"+crypto.randomUUID()+".webp";
-   var up=await sb.storage.from("profile-photos").upload(p,b,{contentType:"image/webp"});if(up.error)throw up.error;
+   var b=await blobOf(files[i],1000),p=user.id+"/"+crypto.randomUUID()+"."+extOf(b);
+   var up=await sb.storage.from("profile-photos").upload(p,b,{contentType:b.type});if(up.error)throw up.error;
    var ins=await sb.from("companion_photos").insert({companion_id:mine.id,path:p});
    if(ins.error){await sb.storage.from("profile-photos").remove([p]);throw ins.error}
   }catch(e){fail++;console.error("Saathi: photo upload failed",e)}
@@ -294,21 +337,25 @@ $("gal").onclick=async function(e){
 function dayKey(s){return new Date(s).toDateString()}
 function tm(s){return new Date(s).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
 function dcard(b,kind,live){
- var act=ACTS[KEYS.indexOf(b.activity)]||b.activity,id=esc(b.id),c=0;
- var h='<div class="bk"><h3>'+esc(act)+'</h3><p class="meta">'+new Date(b.starts_at).toLocaleString()+' \u00b7 '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' \u00b7 '+inr(b.amount_paise/100)+'</p>';
+ var act=ACTS[KEYS.indexOf(b.activity)]||b.activity,id=esc(b.id),c=0,when=new Date(b.starts_at).toLocaleString();
+ var h='<div class="bk"><h3>'+esc(act)+'</h3><p class="meta">'+when+' \u00b7 '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' \u00b7 '+inr(b.amount_paise/100)+'</p>';
+ if(kind=="req"||kind=="up")h+='<p class="meta" data-cust="'+id+'">Checking who requested...</p>';
  if(kind=="req"){
   var o=live.filter(function(x){return x.id!=b.id&&dayKey(x.starts_at)==dayKey(b.starts_at)});
   var acc=o.filter(function(x){return x.status=="accepted"}),pen=o.filter(function(x){return x.status=="requested"});
   if(acc.length){c=1;h+='<div class="warn"><b>Same day:</b> you already accepted another booking this day, at '+tm(acc[0].starts_at)+'. You can reject this one.</div>'}
   else if(pen.length){c=1;h+='<div class="warn"><b>Same day:</b> you have '+pen.length+' other request(s) for this day. Accept the one you want and reject the rest.</div>'}
-  h+='<button class="btn" data-b="'+id+'" data-s="accepted" data-f="requested" data-c="'+c+'">Accept</button><button class="btn alt" data-b="'+id+'" data-s="declined" data-f="requested">Reject</button>';
+  h+='<p class="meta">Only accept if you are comfortable. Meet only in a public place.</p><button class="btn" data-b="'+id+'" data-s="accepted" data-f="requested" data-c="'+c+'">Accept</button><button class="btn alt" data-b="'+id+'" data-s="declined" data-f="requested">Reject</button>'+srow(b,"",false);
  }else if(kind=="up"){
-  h+='<p><span class="pill">Accepted</span> <span class="meta">Payment is not live yet.</span></p><button class="btn" data-chat="'+id+'" data-t="'+esc(act)+'">Chat</button><button class="btn alt" data-b="'+id+'" data-s="cancelled" data-f="accepted">Cancel booking</button>';
+  h+='<p><span class="pill">Accepted</span> <span class="meta">Payment is not live yet.</span></p><button class="btn" data-chat="'+id+'" data-t="'+esc(act)+'">Chat</button><button class="btn alt" data-b="'+id+'" data-s="cancelled" data-f="accepted">Cancel booking</button>'+srow(b,"I'm meeting a Saathi customer for "+act+" at "+b.venue+" on "+when+". Booked on Saathi.",true);
  }else{
   h+='<p><span class="pill">'+esc(b.status=="requested"?"expired":b.status)+'</span></p>';
  }
  return h+'</div>';
 }
+function fillCust(list){list.forEach(function(b){sb.rpc("booking_customer",{p_booking:b.id}).then(function(r){
+ var el=document.querySelector('[data-cust="'+b.id+'"]');if(!el)return;var x=r.data&&r.data[0];
+ el.textContent=x?"Requested by "+x.first_name+" \u00b7 member since "+new Date(x.member_since).toLocaleDateString([],{month:"short",year:"numeric"})+" \u00b7 signed in with Google, ID not verified":"Customer details unavailable."})})}
 async function loadDash(){
  var el=$("dash");
  if(!mine){el.innerHTML='<div class="empty">Create your listing to start receiving requests. <a href="#/list" style="color:var(--accent2);font-weight:700">Create a listing</a></div>';return}
@@ -322,10 +369,11 @@ async function loadDash(){
  var past=all.filter(function(b){return req.indexOf(b)<0&&up.indexOf(b)<0}).reverse();
  function sec(t,l,k,e){return '<div class="dsec"><h3>'+t+' ('+l.length+')</h3>'+(l.length?l.map(function(b){return dcard(b,k,live)}).join(""):'<p class="meta">'+e+'</p>')+'</div>'}
  el.innerHTML=sec("New requests",req,"req","No pending requests.")+sec("Upcoming",up,"up","Nothing accepted yet.")+sec("Past and closed",past,"past","Nothing here yet.");
- refreshBadge();
+ fillCust(req.concat(up));refreshBadge();
 }
 $("dref").onclick=function(){loadDash()};
 $("dash").onclick=async function(e){
+ if(safety(e))return;
  var ch=e.target.closest("button[data-chat]");if(ch){openChat(ch.dataset.chat,ch.dataset.t);return}
  var b=e.target.closest("button[data-b]");if(!b||!mine)return;var s=b.dataset.s;
  if(s=="declined"&&!confirm("Reject this request?"))return;
@@ -364,6 +412,7 @@ async function openChat(id,title){
  await chatFetch();if(cs.id==id)cs.fresh=false;
 }
 $("cclose").onclick=function(){$("cdlg").close()};
+$("creport").onclick=function(){if(cs.id)openReport(cs.id)};
 $("cdlg").addEventListener("close",chatStop);
 $("cf").onsubmit=async function(e){
  e.preventDefault();var t=$("cin").value.trim();if(!t||!cs.id)return;
@@ -437,7 +486,7 @@ function nBook(b){
  if(!user)return;var k="b:"+b.id+":"+b.status;if(N.keys[k])return;
  var inc=mine&&b.companion_id==mine.id,act=ACTS[KEYS.indexOf(b.activity)]||"your booking",
   when=new Date(b.starts_at).toLocaleString([],{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}),
-  p=DATA.filter(function(x){return String(x.id)==String(b.companion_id)})[0],who=p?p.n:"The companion";
+  who=NAMES[b.companion_id]||"The companion";
  if(inc&&b.status=="requested")npush({id:k,kind:"req",title:"New booking request",text:act+" \u00b7 "+when,go:"#/dashboard"});
  else if(!inc&&b.status=="accepted")npush({id:k,kind:"ok",title:"Booking accepted!",text:who+" accepted your request \u00b7 "+when,go:"#/bookings"});
  else if(!inc&&b.status=="declined")npush({id:k,kind:"no",title:"Request declined",text:who+" couldn't make "+when,go:"#/bookings"});
@@ -448,7 +497,7 @@ async function nPoll(){
  if(!user||!sb)return;
  try{
   var b=await sb.from("bookings").select("id,companion_id,status,activity,starts_at").order("created_at",{ascending:false}).limit(60);
-  if(!b.error)b.data.slice().reverse().forEach(nBook);
+  if(!b.error){await nameFor(b.data.map(function(x){return x.companion_id}));b.data.slice().reverse().forEach(nBook)}
   var m=await sb.from("messages").select("id,booking_id,sender_id,body,created_at").gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(60);
   if(!m.error)m.data.slice().reverse().forEach(nMsg);
  }catch(e){console.warn("Saathi: notification poll failed",e)}
@@ -466,10 +515,10 @@ async function notifStart(){
  N.loud=true;nSave();
  N.ch=sb.channel("notif-"+me)
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},function(p){if(p.new)nMsg(p.new)})
-  .on("postgres_changes",{event:"*",schema:"public",table:"bookings"},function(p){if(p.new&&p.new.id)nBook(p.new)})
+  .on("postgres_changes",{event:"*",schema:"public",table:"bookings"},function(p){if(p.new&&p.new.id)nameFor([p.new.companion_id]).then(function(){nBook(p.new)})})
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"companion_photos"},function(){loadExtras()})
   .subscribe();
- N.poll=setInterval(nPoll,15000);
+ N.poll=setInterval(nPoll,45000);
 }
 function notifStop(){
  if(N.ch&&sb)sb.removeChannel(N.ch);clearInterval(N.poll);N.ch=null;N.items=[];N.keys={};N.loud=false;
@@ -493,10 +542,13 @@ window.addEventListener("scroll",closePanel,{passive:true});window.addEventListe
 document.addEventListener("visibilitychange",function(){if(document.visibilityState=="visible"&&user)nPoll()});
 
 /* ---------- routing + init ---------- */
+var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
  var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h=="#/dashboard"?"dashboard":"home";
  if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
- var pv=document.body.dataset.view;document.body.dataset.view=v;window.scrollTo(0,0);
+ var pv=document.body.dataset.view;document.body.dataset.view=v;
+ if(pv!==v)window.scrollTo(0,0);
+ if(v=="home"&&ANCH[h]){var t=document.getElementById(h.slice(1));if(t)t.scrollIntoView()}
  if(user)persist();
  if(v=="verify"&&pv!="verify")startVerify();
  if(v=="bookings")loadBookings();
@@ -507,7 +559,8 @@ window.addEventListener("hashchange",route);
 ui();renderChips();
 if(!configured){$("cfg").hidden=false;route();renderOnline();renderGrid()}
 else{
- sb.auth.onAuthStateChange(function(ev,session){var u=session&&session.user||null;if((u&&u.id)!=(user&&user.id))setTimeout(function(){setUser(u)},0)});
- sb.auth.getSession().then(function(r){var u=r.data.session&&r.data.session.user||null;if((u&&u.id)!=(user&&user.id))setUser(u);else{route();load()}}).catch(function(e){console.error("Saathi: session check failed",e);route();load()});
- setTimeout(function(){if(!document.body.dataset.view){console.warn("Saathi: sign-in is slow, showing the page anyway");route();load()}},5000);
+ var onSession=function(u){var id=u?u.id:null;if(id===authId)return;authId=id;setTimeout(function(){setUser(u)},0)};
+ sb.auth.onAuthStateChange(function(ev,session){onSession(session&&session.user||null)});
+ sb.auth.getSession().then(function(r){onSession(r.data.session&&r.data.session.user||null)}).catch(function(e){console.error("Saathi: session check failed",e);route();load()});
+ setTimeout(function(){if(authId===undefined){console.warn("Saathi: sign-in is slow, showing the page anyway");route();load()}},5000);
 }
