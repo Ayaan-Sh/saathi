@@ -11,7 +11,7 @@
 </head>
 <body>
 <div class="topbg"><div class="wrap">
-<nav><span class="logo">Saathi</span><div><a href="#browse">Find</a><a href="#/list">Become a companion</a><a href="#/bookings">My bookings</a><a href="#/verify">Verify ID</a><a href="#safety">Safety</a><span id="acct"></span></div></nav>
+<nav><span class="logo">Saathi</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/bookings">My bookings</a><a href="#/verify">Verify ID</a><a href="#safety">Safety</a><span id="acct"></span></div></nav>
 
 <header class="hero home"><h1>Don't do garba alone.</h1><p>Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
 <div class="cta"><a class="btn white" href="#browse">Find a companion</a><a class="btn ghost" href="#/list">List yourself</a></div></header>
@@ -54,11 +54,11 @@
 <section id="join" class="listv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div id="lstatus"></div>
 <div class="two">
 <div>
-<h2>List yourself as a companion</h2>
+<h2 id="ltitle">List yourself as a companion</h2>
 <p style="color:var(--mute)">Set your own rate, activities and city. You approve every booking, and you can decline or block anyone, any time.</p>
 <div class="note" style="margin-top:14px">Listings go live after ID and selfie verification. This demo shows your profile instantly so you can see how it looks.</div>
 </div>
-<form id="form">
+<div><form id="form">
 <label for="pf">Your photo</label><input id="pf" type="file" accept="image/*"><img id="pv" alt="Your photo preview" hidden><p class="meta">Use a clear photo of yourself. It is matched against your selfie at verification.</p>
 <label for="n">Name</label><input id="n" required maxlength="40">
 <label for="a">Age</label><input id="a" type="number" min="18" max="80" required placeholder="18 or above">
@@ -72,10 +72,14 @@
 <button class="btn alt" type="button" id="myloc" style="margin-top:12px">Use my location for my listing</button> <span class="meta" id="mylocmsg"></span>
 <label for="b">About you</label><textarea id="b" rows="3" maxlength="200" placeholder="Garba since age 6. Happy to teach basic steps."></textarea>
 <p class="meta">Companionship only. Any request beyond time and company is a violation and gets the account banned.</p>
-<button class="btn" type="submit">Create my listing</button>
+<button class="btn" type="submit" id="lsave">Create my listing</button>
 </form>
+<div id="galbox" hidden style="margin-top:36px"><h3>More photos</h3><p class="meta">Add up to 6 extra photos. Customers see them when they open your gallery.</p><div class="gal" id="gal"></div><input id="gf" type="file" accept="image/*" multiple hidden><button class="btn alt" type="button" id="gadd">Add photos</button></div>
+</div>
 </div>
 </section>
+
+<section id="dashboard" class="dbv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Your bookings</h2><button class="btn alt" id="dref" type="button">Refresh</button></div><p class="meta" style="max-width:56ch;margin-top:10px">Accept or decline each request. If two requests land on the same day, accept the one you want and decline the other.</p><div id="dash"></div></section>
 
 <section id="verify" class="vw"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
 <h2>Verify your identity</h2>
@@ -96,6 +100,7 @@
 </div>
 
 <dialog id="dlg"><form method="dialog" id="bk"></form></dialog>
+<dialog id="pdlg"><div id="pbody"></div><button class="btn alt" id="pclose" type="button" style="margin-top:14px">Close</button></dialog>
 <div class="toast" id="toast" role="status"></div>
 
 <script src="js/config.js"></script>

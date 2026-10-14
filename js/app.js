@@ -8,6 +8,7 @@ var sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{fl
 var user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={};
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function inr(n){return "₹"+Number(n).toLocaleString("en-IN")}
+function pubUrl(p){return sb.storage.from("profile-photos").getPublicUrl(p).data.publicUrl}
 function toast(t){var x=$("toast");x.textContent=t;x.style.display="block";clearTimeout(x._t);x._t=setTimeout(function(){x.style.display="none"},4000)}
 function getLoc(cb){if(!navigator.geolocation){toast("This browser can't share location. Pick your city instead.");return}
  navigator.geolocation.getCurrentPosition(function(p){cb(p.coords.latitude,p.coords.longitude)},function(){toast("Location is blocked. Allow it in your browser, or pick your city.")},{timeout:9000})}
@@ -15,7 +16,7 @@ function blobOf(file,maxW){return createImageBitmap(file,{imageOrientation:"from
 function loadImg(f,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){cb(im)};im.onerror=function(){cb(null)};im.src=fr.result};fr.readAsDataURL(f)}
 
 /* ---------- data ---------- */
-function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,out:r.available_out!==false,d:r.distance_km}}
+function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,out:r.available_out!==false,d:r.distance_km,extra:[]}}
 async function load(){
  if(!sb){renderOnline();renderGrid();return}
  var my=++token,g=$("gender").value||null,a=active>-1?KEYS[active]:null,res;
@@ -26,7 +27,7 @@ async function load(){
  if(my!=token)return;
  var s=$("sort").value,pr=function(p){return p.day||p.hr*8};
  DATA=res.map(norm);DATA.sort(function(a,b){return s=="n"&&loc?a.d-b.d:s=="p"?pr(a)-pr(b):b.rt-a.rt});
- renderOnline();renderGrid();
+ renderOnline();renderGrid();loadExtras();
 }
 function ph(p,cls){var nm=esc(p.n);return p.photo?'<img class="'+cls+'" src="'+esc(p.photo)+'" alt="'+(cls=="ph"?'Photo of '+nm:'')+'">':'<div class="'+cls+'" style="background:'+PHS[String(p.id).charCodeAt(0)%3]+'">'+esc(p.n[0].toUpperCase())+'</div>'}
 function where(p){return loc&&p.d!=null?(p.d<1?'Under 1':Math.round(p.d))+' km away':esc(p.c)}
@@ -42,10 +43,10 @@ function renderGrid(){
   return '<article class="card">'+ph(p,"ph")+'<div class="bd"><div><h3>'+esc(p.n)+', '+esc(p.a)+'</h3><div class="meta">'+where(p)+(p.rt?' · ★ '+p.rt.toFixed(1):' · New')+'</div></div>'
   +'<div class="ver">ID verified</div>'+(p.online?'<div class="onl">● Online now</div>':'')
   +'<div class="acts">'+p.acts.map(function(i){return '<span>'+esc(ACTS[i])+'</span>'}).join("")+'</div>'
-  +'<div class="meta">'+esc(p.b)+'</div>'
+  +'<div class="meta">'+esc(p.b)+'</div>'+(p.extra&&p.extra.length?'<button class="more" type="button" data-ph="'+esc(p.id)+'">See all photos ('+(p.extra.length+(p.photo?1:0))+')</button>':'')
   +'<div class="price"><span>'+price+'</span><button class="btn" data-id="'+esc(p.id)+'">Request</button></div></div></article>'}).join("");
 }
-$("grid").onclick=$("orow").onclick=function(e){var b=e.target.closest("button[data-id]");if(b)openBook(b.dataset.id)};
+$("grid").onclick=$("orow").onclick=function(e){var g=e.target.closest("button[data-ph]");if(g){showPhotos(g.dataset.ph);return}var b=e.target.closest("button[data-id]");if(b)openBook(b.dataset.id)};
 
 /* ---------- filters ---------- */
 function renderChips(){
@@ -82,10 +83,10 @@ function persist(){
 }
 function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(prefs[k]!=null)$(k).value=prefs[k]});
  active=typeof prefs.active=="number"?prefs.active:-1;if($("sort").value=="n"&&!loc)$("sort").value="r";setSeg();renderChips()}
-async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();mine=r.data||null;renderStatus()}
-function ping(){if(user&&document.visibilityState=="visible")sb.rpc("touch_presence")}
+async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();mine=r.data||null;renderStatus();updateNav();refreshBadge()}
+function ping(){if(user&&document.visibilityState=="visible"){sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
- user=u;renderAcct();clearInterval(presT);mine=null;prefs={};
+ user=u;renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();
  if(u){try{
   try{var nx=sessionStorage.getItem("saathi_next");if(nx){nextHash=nx;sessionStorage.removeItem("saathi_next")}}catch(e){}
   await loadMine();
@@ -125,14 +126,17 @@ $("form").onsubmit=async function(e){
  if(!sel.length){toast("Pick at least one activity you offer.");return}
  var btn=e.submitter;if(btn)btn.disabled=true;
  try{
-  var path=mine&&mine.photo_path;
+  var path=mine&&mine.photo_path,oldPath=path;
   if(photo){path=user.id+"/"+crypto.randomUUID()+".webp";var up=await sb.storage.from("profile-photos").upload(path,photo,{contentType:"image/webp"});if(up.error)throw up.error}
   var c=$("c").value,o=CITY[c],pt=myLoc||{lat:o[0],lng:o[1]};
   var row={name:$("n").value.trim(),age:age,gender:$("g").value,city:c,bio:$("b").value.trim()||null,activities:sel,rate_hour:hr,rate_day:day,available_out:$("goout").checked,photo_path:path,location:"SRID=4326;POINT("+pt.lng+" "+pt.lat+")"};
   var r=mine?await sb.from("companions").update(row).eq("id",mine.id).select().single():await sb.from("companions").insert(Object.assign({user_id:user.id},row)).select().single();
   if(r.error)throw r.error;
-  mine=r.data;prefs.draft=null;persist();photo=null;$("pv").hidden=true;renderStatus();
-  toast("Listing saved. Next, verify your ID so it can go live.");location.hash="#/verify";
+  var first=!mine||mine.status=="pending"||mine.status=="rejected";
+  if(photo&&oldPath&&oldPath!=path)sb.storage.from("profile-photos").remove([oldPath]);
+  mine=r.data;prefs.draft=null;persist();photo=null;updateNav();renderStatus();
+  if(first){$("pv").hidden=true;toast("Listing saved. Next, verify your ID so it can go live.");location.hash="#/verify"}
+  else{listMode();toast("Profile updated.")}
  }catch(err){toast("Couldn't save your listing. "+(err.message||""))}
  if(btn)btn.disabled=false;
 };
@@ -227,15 +231,122 @@ async function finish(){
  }catch(e){say("Something went wrong: "+(e.message||"upload failed")+".");choices(["Try again"],function(){finish()})}
 }
 
+/* ---------- nav, photos, dashboard ---------- */
+function updateNav(){var has=!!(user&&mine);$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
+async function loadExtras(){
+ if(!sb||!DATA.length)return;var my=token;
+ var r=await sb.from("companion_photos").select("companion_id,path").in("companion_id",DATA.map(function(p){return p.id})).order("created_at");
+ if(r.error||my!=token)return;
+ var m={},any=false;r.data.forEach(function(x){(m[x.companion_id]=m[x.companion_id]||[]).push(pubUrl(x.path))});
+ DATA.forEach(function(p){p.extra=m[p.id]||[];if(p.extra.length)any=true});
+ if(any)renderGrid();
+}
+function showPhotos(id){var p=DATA.filter(function(x){return String(x.id)==id})[0];if(!p)return;
+ var l=(p.photo?[p.photo]:[]).concat(p.extra||[]);
+ $("pbody").innerHTML='<h2 style="font-size:24px;margin-bottom:12px">'+esc(p.n)+'</h2><div class="pg">'+l.map(function(u){return '<img src="'+esc(u)+'" alt="Photo of '+esc(p.n)+'">'}).join("")+'</div>';
+ $("pdlg").showModal()}
+$("pclose").onclick=function(){$("pdlg").close()};
+
+/* edit profile + extra photos */
+var gal=[];
+function listMode(){
+ var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;
+ if(ed&&mine.photo_path&&!photo){$("pv").src=pubUrl(mine.photo_path);$("pv").hidden=false}
+ if(ed)renderGal();
+}
+async function renderGal(){
+ var el=$("gal");if(!mine)return;
+ var r=await sb.from("companion_photos").select("id,path").eq("companion_id",mine.id).order("created_at");
+ if(r.error){el.innerHTML='<p class="meta">Couldn\'t load your photos.</p>';return}
+ gal=r.data;
+ el.innerHTML=gal.length?gal.map(function(g){return '<div class="gt"><img src="'+esc(pubUrl(g.path))+'" alt="Your extra photo"><button type="button" data-g="'+esc(g.id)+'" aria-label="Remove photo">\u00d7</button></div>'}).join(""):'<p class="meta" style="grid-column:1/-1">No extra photos yet.</p>';
+ $("gadd").disabled=gal.length>=6;
+}
+$("gadd").onclick=function(){$("gf").click()};
+$("gf").onchange=async function(){
+ var files=[].slice.call(this.files);this.value="";if(!files.length||!mine)return;
+ var room=6-gal.length;if(room<=0){toast("You already have 6 extra photos. Remove one to add another.");return}
+ if(files.length>room){toast("Only "+room+" more photo(s) fit. Adding the first "+room+".");files=files.slice(0,room)}
+ $("gadd").disabled=true;var fail=0;
+ for(var i=0;i<files.length;i++){
+  try{
+   var b=await blobOf(files[i],1000),p=user.id+"/"+crypto.randomUUID()+".webp";
+   var up=await sb.storage.from("profile-photos").upload(p,b,{contentType:"image/webp"});if(up.error)throw up.error;
+   var ins=await sb.from("companion_photos").insert({companion_id:mine.id,path:p});
+   if(ins.error){await sb.storage.from("profile-photos").remove([p]);throw ins.error}
+  }catch(e){fail++;console.error("Saathi: photo upload failed",e)}
+ }
+ if(fail)toast(fail+" photo(s) couldn't be uploaded. Use JPG or PNG files.");
+ renderGal();
+};
+$("gal").onclick=async function(e){
+ var b=e.target.closest("button[data-g]");if(!b||!confirm("Remove this photo?"))return;b.disabled=true;
+ var g=gal.filter(function(x){return String(x.id)==b.dataset.g})[0];
+ var r=await sb.from("companion_photos").delete().eq("id",b.dataset.g);
+ if(r.error){toast("Couldn't remove the photo. "+r.error.message);b.disabled=false;return}
+ if(g)sb.storage.from("profile-photos").remove([g.path]);
+ renderGal();
+};
+
+/* booking dashboard for companions */
+function dayKey(s){return new Date(s).toDateString()}
+function tm(s){return new Date(s).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+function dcard(b,kind,live){
+ var act=ACTS[KEYS.indexOf(b.activity)]||b.activity,id=esc(b.id),c=0;
+ var h='<div class="bk"><h3>'+esc(act)+'</h3><p class="meta">'+new Date(b.starts_at).toLocaleString()+' \u00b7 '+esc(b.venue)+'<br>'+(b.mode=="day"?'Full day':b.hours+' hour(s)')+' \u00b7 '+inr(b.amount_paise/100)+'</p>';
+ if(kind=="req"){
+  var o=live.filter(function(x){return x.id!=b.id&&dayKey(x.starts_at)==dayKey(b.starts_at)});
+  var acc=o.filter(function(x){return x.status=="accepted"}),pen=o.filter(function(x){return x.status=="requested"});
+  if(acc.length){c=1;h+='<div class="warn"><b>Same day:</b> you already accepted another booking this day, at '+tm(acc[0].starts_at)+'. You can decline this one.</div>'}
+  else if(pen.length){c=1;h+='<div class="warn"><b>Same day:</b> you have '+pen.length+' other request(s) for this day. Accept the one you want and decline the rest.</div>'}
+  h+='<button class="btn" data-b="'+id+'" data-s="accepted" data-f="requested" data-c="'+c+'">Accept</button><button class="btn alt" data-b="'+id+'" data-s="declined" data-f="requested">Decline</button>';
+ }else if(kind=="up"){
+  h+='<p><span class="pill">Accepted</span> <span class="meta">Payment is not live yet.</span></p><button class="btn alt" data-b="'+id+'" data-s="cancelled" data-f="accepted">Cancel booking</button>';
+ }else{
+  h+='<p><span class="pill">'+esc(b.status=="requested"?"expired":b.status)+'</span></p>';
+ }
+ return h+'</div>';
+}
+async function loadDash(){
+ var el=$("dash");
+ if(!mine){el.innerHTML='<div class="empty">Create your listing to start receiving requests. <a href="#/list" style="color:var(--accent2);font-weight:700">Create a listing</a></div>';return}
+ el.innerHTML='<p class="meta">Loading...</p>';
+ var r=await sb.from("bookings").select("*").eq("companion_id",mine.id).order("starts_at",{ascending:true});
+ if(r.error){el.innerHTML='<p class="meta">Couldn\'t load your bookings.</p>';return}
+ var now=Date.now(),all=r.data;
+ var live=all.filter(function(b){return(b.status=="requested"||b.status=="accepted")&&new Date(b.starts_at)>now-43200000});
+ var req=all.filter(function(b){return b.status=="requested"&&new Date(b.starts_at)>now});
+ var up=all.filter(function(b){return b.status=="accepted"&&new Date(b.starts_at)>now-43200000});
+ var past=all.filter(function(b){return req.indexOf(b)<0&&up.indexOf(b)<0}).reverse();
+ function sec(t,l,k,e){return '<div class="dsec"><h3>'+t+' ('+l.length+')</h3>'+(l.length?l.map(function(b){return dcard(b,k,live)}).join(""):'<p class="meta">'+e+'</p>')+'</div>'}
+ el.innerHTML=sec("New requests",req,"req","No pending requests.")+sec("Upcoming",up,"up","Nothing accepted yet.")+sec("Past and closed",past,"past","Nothing here yet.");
+ refreshBadge();
+}
+$("dref").onclick=function(){loadDash()};
+$("dash").onclick=async function(e){
+ var b=e.target.closest("button[data-b]");if(!b||!mine)return;var s=b.dataset.s;
+ if(s=="declined"&&!confirm("Decline this request?"))return;
+ if(s=="cancelled"&&!confirm("Cancel this accepted booking? Only do this if you truly can't make it."))return;
+ if(s=="accepted"&&b.dataset.c=="1"&&!confirm("You already have another booking on this day. Accept this one too?"))return;
+ b.disabled=true;
+ var r=await sb.from("bookings").update({status:s}).eq("id",b.dataset.b).eq("companion_id",mine.id).eq("status",b.dataset.f).select("id");
+ if(r.error)toast("Couldn't update. "+r.error.message);
+ else if(!r.data||!r.data.length)toast("This booking changed in the meantime. Refreshed your list.");
+ else toast(s=="accepted"?"Booking accepted.":s=="declined"?"Request declined.":"Booking cancelled.");
+ loadDash();
+};
+
 /* ---------- routing + init ---------- */
 function route(){
- var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":"home";
- if((v=="list"||v=="verify"||v=="bookings")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
+ var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h=="#/dashboard"?"dashboard":"home";
+ if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
  var pv=document.body.dataset.view;document.body.dataset.view=v;window.scrollTo(0,0);
  if(user)persist();
  if(v=="verify"&&pv!="verify")startVerify();
  if(v=="bookings")loadBookings();
- if(v=="list"){renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing()}
+ if(v=="dashboard")loadDash();
+ if(v=="list"){renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
 }
 window.addEventListener("hashchange",route);
 ui();renderChips();
