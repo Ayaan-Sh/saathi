@@ -23,6 +23,7 @@ async function loadHidden(){HIDDEN=[];if(!user||!sb)return;var r=await sb.rpc("h
 function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,out:r.available_out!==false,d:r.distance_km,extra:[]}}
 async function load(){
  if(!sb){renderOnline();renderGrid();return}
+ if(loc&&!user){loc=null;ui()}
  var my=++token,g=$("gender").value||null,a=active>-1?KEYS[active]:null,res;
  try{
   if(loc){var r=await sb.rpc("nearby_companions",{p_lat:loc.lat,p_lng:loc.lng,p_radius_km:+$("rad").value,p_gender:g,p_activity:a}).limit(200);if(r.error)throw r.error;res=r.data}
@@ -68,7 +69,7 @@ function ui(){
  if(!loc){if($("sort").value=="n")$("sort").value="r";$("sort").dataset.auto=""}
  $("locmsg").textContent=loc?"Showing companions near you. Your position is used only for this search and is never shown to anyone.":"Share your location to see who is available near you, or pick a city.";
 }
-$("loc").onclick=function(){if(loc){loc=null;ui();load();return}getLoc(function(a,b){loc={lat:a,lng:b};ui();load()})};
+$("loc").onclick=function(){if(loc){loc=null;ui();load();return}if(!user){needLogin("Log in to search near you. You can still browse by city without logging in.");return}getLoc(function(a,b){loc={lat:a,lng:b};ui();load()})};
 ["city","gender","sort","rad"].forEach(function(id){$(id).onchange=function(){persist();load()}});
 $("seg").onclick=function(e){var b=e.target.closest("button");if(!b)return;$("gender").value=b.dataset.g;setSeg();persist();load()};
 
