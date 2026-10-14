@@ -90,7 +90,7 @@ function persist(){
 function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(prefs[k]!=null)$(k).value=prefs[k]});
  active=typeof prefs.active=="number"?prefs.active:-1;if($("sort").value=="n"&&!loc)$("sort").value="r";setSeg();renderChips()}
 async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();if(r.error)throw r.error;mine=r.data||null;renderStatus();updateNav();refreshBadge()}
-function ping(){if(user&&document.visibilityState=="visible"){if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
+function ping(){if(user&&document.visibilityState=="visible"){if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
  user=u;stateLoaded=false;HIDDEN=[];renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
  if(u){try{
@@ -276,7 +276,7 @@ async function finish(){
 }
 
 /* ---------- nav, photos, dashboard ---------- */
-function updateNav(){var has=!!(user&&mine);$("verlink").hidden=!has;$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+function updateNav(){var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
 async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
 async function loadExtras(){
  if(!sb||!DATA.length)return;var my=token;
@@ -391,15 +391,30 @@ $("dash").onclick=async function(e){
 /* ---------- 24-hour booking chat ---------- */
 var cs={},DAY=86400000;
 function chatStop(){if(cs.ch)sb.removeChannel(cs.ch);clearInterval(cs.poll);cs={}}
+var SIGN={};
+function msgBody(m){
+ if(!m.image_path)return esc(m.body);
+ var u=SIGN[m.image_path];
+ return '<img class="cimg" data-p="'+esc(m.image_path)+'"'+(u&&u.exp>Date.now()?' src="'+esc(u.url)+'"':'')+' alt="Photo">';
+}
+async function signImgs(box){
+ var im=[].slice.call(box.querySelectorAll("img.cimg:not([src])"));if(!im.length)return;
+ var paths=im.map(function(i){return i.dataset.p}).filter(function(p,ix,arr){return arr.indexOf(p)==ix});
+ var r=await sb.storage.from("chat-images").createSignedUrls(paths,3600);
+ if(r.error||!r.data)return;
+ r.data.forEach(function(x){if(x.signedUrl)SIGN[x.path]={url:x.signedUrl,exp:Date.now()+3300000}});
+ im.forEach(function(i){var s=SIGN[i.dataset.p];if(s&&box.contains(i)){i.onload=function(){if(cs.stick)box.scrollTop=box.scrollHeight};i.src=s.url}});
+}
 function chatDraw(){
  var box=$(cs.pg?"pcbox":"cbox"),near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
  var l=Object.keys(cs.seen).map(function(k){return cs.seen[k]}).filter(function(m){return Date.now()-new Date(m.created_at)<DAY}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at)});
- box.innerHTML=l.length?l.map(function(m){return '<div class="msg'+(m.sender_id==user.id?' me':'')+'">'+esc(m.body)+'<small>'+tm(m.created_at)+'</small></div>'}).join(""):'<p class="meta">No messages yet. Say hi and agree on where to meet.</p>';
- if(near||cs.fresh)box.scrollTop=box.scrollHeight;
+ box.innerHTML=l.length?l.map(function(m){return '<div class="msg'+(m.sender_id==user.id?' me':'')+'">'+msgBody(m)+'<small>'+tm(m.created_at)+'</small></div>'}).join(""):'<p class="meta">No messages yet. Say hi and agree on where to meet.</p>';
+ cs.stick=near||cs.fresh;if(cs.stick)box.scrollTop=box.scrollHeight;
+ signImgs(box);
 }
 async function chatFetch(){
  if(!cs.id)return;var id=cs.id;
- var r=await sb.from("messages").select("id,sender_id,body,created_at").eq("booking_id",id).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at");
+ var r=await sb.from("messages").select("id,sender_id,body,image_path,created_at").eq("booking_id",id).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at");
  if(cs.id!=id)return;
  var ce=$(cs.pg?"pcerr":"cerr");if(r.error){ce.textContent="Couldn't load messages. "+r.error.message;return}
  ce.textContent="";r.data.forEach(function(m){cs.seen[m.id]=m});chatDraw();
@@ -482,7 +497,7 @@ function nMsg(m){
  if(!user||m.sender_id==user.id)return;var k="m:"+m.id;if(N.keys[k])return;
  if(document.body.dataset.view=="chats")chatsRefresh();
  if(cs.id==m.booking_id&&($("cdlg").open||(cs.pg&&document.body.dataset.view=="chats"))){N.keys[k]=1;if(N.loud)chime("msg");return}
- var t=String(m.body||"");
+ var t=m.image_path?"Sent you a photo":String(m.body||"");
  npush({id:k,kind:"msg",title:"New message",text:t.length>60?t.slice(0,60)+"\u2026":t,go:"chat:"+m.booking_id});
 }
 function nBook(b){
@@ -501,7 +516,7 @@ async function nPoll(){
  try{
   var b=await sb.from("bookings").select("id,companion_id,status,activity,starts_at").order("created_at",{ascending:false}).limit(60);
   if(!b.error){await nameFor(b.data.map(function(x){return x.companion_id}));b.data.slice().reverse().forEach(nBook)}
-  var m=await sb.from("messages").select("id,booking_id,sender_id,body,created_at").gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(60);
+  var m=await sb.from("messages").select("id,booking_id,sender_id,body,image_path,created_at").gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(60);
   if(!m.error)m.data.slice().reverse().forEach(nMsg);
  }catch(e){console.warn("Saathi: notification poll failed",e)}
  N.tick++;if(N.tick%3==0&&document.body.dataset.view=="home")loadExtras();
@@ -575,7 +590,7 @@ async function loadChatRows(){
  await nameFor(rows.filter(function(b){return b.customer_id==user.id}).map(function(b){return b.companion_id}));
  await Promise.all(rows.filter(function(b){return mid&&b.companion_id==mid&&!CNAME[b.id]}).map(function(b){return sb.rpc("booking_customer",{p_booking:b.id}).then(function(x){var d=x.data&&x.data[0];CNAME[b.id]=d&&d.first_name||"Customer"})}));
  var last={};
- if(rows.length){var m=await sb.from("messages").select("booking_id,sender_id,body,created_at").in("booking_id",rows.map(function(b){return b.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
+ if(rows.length){var m=await sb.from("messages").select("booking_id,sender_id,body,image_path,created_at").in("booking_id",rows.map(function(b){return b.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
   (m.data||[]).forEach(function(x){if(!last[x.booking_id])last[x.booking_id]=x})}
  rows.forEach(function(b){b.last=last[b.id]||null});
  rows.sort(function(a,b){var la=a.last?+new Date(a.last.created_at):0,lb=b.last?+new Date(b.last.created_at):0;return lb-la||new Date(b.starts_at)-new Date(a.starts_at)});
@@ -586,7 +601,7 @@ function paintList(){
  var unread={};N.items.forEach(function(i){if(!i.read&&i.go&&i.go.indexOf("chat:")==0)unread[i.go.slice(5)]=1});
  el.innerHTML=CR.map(function(b){
   var nm=chatRowName(b),act=ACTS[KEYS.indexOf(b.activity)]||b.activity,l=b.last,on=!!ONL[b.id];
-  var txt=l?(l.sender_id==user.id?"You: ":"")+String(l.body):act+" \u00b7 "+new Date(b.starts_at).toLocaleDateString([],{day:"numeric",month:"short"});
+  var txt=l?(l.sender_id==user.id?"You: ":"")+(l.image_path?"\ud83d\udcf7 Photo":String(l.body)):act+" \u00b7 "+new Date(b.starts_at).toLocaleDateString([],{day:"numeric",month:"short"});
   if(txt.length>50)txt=txt.slice(0,50)+"\u2026";
   return '<button type="button" role="listitem" class="ni'+(unread[b.id]?' un':'')+(b.id==CUR?' act':'')+'" data-id="'+esc(b.id)+'"><span class="avw2"><span class="nic av">'+esc(nm[0].toUpperCase())+'</span>'+(on?'<i class="pdot"></i>':'')+'</span><span class="nt"><b>'+esc(nm)+'</b><span>'+esc(txt)+'</span><small'+(on?' class="on"':'')+'>'+(on?'Online':(l?ago(+new Date(l.created_at)):''))+'</small></span></button>'}).join("");
 }
@@ -612,6 +627,32 @@ async function chatsPage(id){
 function chatsRefresh(now){clearTimeout(CT);CT=setTimeout(async function(){if(document.body.dataset.view!="chats"||!user)return;if(await loadChatRows())paintList()},now?0:800)}
 $("clistp").onclick=function(e){var b=e.target.closest(".ni");if(b)location.hash="#/chats/"+b.dataset.id};
 $("cback").onclick=function(){location.hash="#/chats"};
+function shrinkPhoto(file){return new Promise(function(res,rej){
+ var url=URL.createObjectURL(file),im=new Image();
+ im.onload=function(){URL.revokeObjectURL(url);var s=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.naturalWidth*s));c.height=Math.max(1,Math.round(im.naturalHeight*s));c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(function(b){b?res(b):rej(new Error("encode"))},"image/jpeg",.85)};
+ im.onerror=function(){URL.revokeObjectURL(url);rej(new Error("decode"))};im.src=url})}
+async function sendPhoto(file){
+ var ce=$("pcerr"),id=cs.id;if(!file||!id)return;
+ var bad=function(t){ce.style.color="#d33";ce.textContent=t};
+ if(!/^image\//.test(file.type)){bad("Please choose a photo.");return}
+ if(file.size>10*1024*1024){bad("That photo is over 10 MB. Choose a smaller one.");return}
+ var bt=[$("pcam"),$("ppic")];bt.forEach(function(b){b.disabled=true});ce.style.color="var(--mute)";ce.textContent="Sending photo...";
+ var path=null;
+ try{
+  var blob=await shrinkPhoto(file);
+  path=id+"/"+(crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(16).slice(2))+".jpg";
+  var up=await sb.storage.from("chat-images").upload(path,blob,{contentType:"image/jpeg"});
+  if(up.error)throw up.error;
+  var r=await sb.from("messages").insert({booking_id:id,body:"Photo",image_path:path}).select("id,sender_id,body,image_path,created_at").single();
+  if(r.error){sb.storage.from("chat-images").remove([path]);throw r.error}
+  ce.textContent="";if(cs.id==id){cs.seen[r.data.id]=r.data;cs.fresh=true;chatDraw();cs.fresh=false}chatsRefresh();
+ }catch(e){bad(e&&e.message=="decode"?"Couldn't read that photo. Try a JPEG or PNG.":"Couldn't send the photo. "+(e&&e.message||""))}
+ bt.forEach(function(b){b.disabled=false});
+}
+$("pcam").onclick=function(){$("pfcam").click()};
+$("ppic").onclick=function(){$("pffile").click()};
+[$("pfcam"),$("pffile")].forEach(function(inp){inp.onchange=function(){var f=this.files&&this.files[0];this.value="";sendPhoto(f)}});
+document.addEventListener("click",function(e){var im=e.target.closest&&e.target.closest("img.cimg");if(im&&im.src){$("pbody").innerHTML='<img class="gi" alt="Photo" src="'+esc(im.src)+'">';$("pdlg").showModal()}});
 $("pcreport").onclick=function(){if(cs.id)openReport(cs.id)};
 $("pcf").onsubmit=async function(e){
  e.preventDefault();var t=$("pcin").value.trim();if(!t||!cs.id)return;
@@ -631,6 +672,7 @@ function route(){
  if(pv!==v)window.scrollTo(0,0);
  if(v=="home"&&ANCH[h]){var t=document.getElementById(h.slice(1));if(t)t.scrollIntoView()}
  if(user)persist();
+ if(v=="verify"&&mine&&mine.status=="verified"){location.hash="#/";return}
  if(v=="verify"&&pv!="verify")startVerify();
  if(pv=="chats"&&v!="chats")chatStop();
  if(v=="chats")chatsPage(h.split("/")[2]||"");

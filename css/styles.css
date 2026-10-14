@@ -194,3 +194,9 @@ body[data-view="chats"] #safety{display:none}
  .cback{display:inline-block}
  #pcreport{display:none}
 }
+
+/* chat photos */
+.ibtn{padding:10px 12px;line-height:0;flex:none}.ibtn svg{width:20px;height:20px}
+#pcam{display:none}@media (pointer:coarse){#pcam{display:inline-block}}
+.cimg{display:block;max-width:min(240px,100%);max-height:300px;border-radius:10px;cursor:zoom-in;min-width:120px;min-height:80px;object-fit:cover;background:rgba(127,127,127,.18)}
+.msg:has(.cimg){padding:6px}
