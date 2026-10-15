@@ -200,3 +200,21 @@ body[data-view="chats"] #safety{display:none}
 #pcam{display:none}@media (pointer:coarse){#pcam{display:inline-block}}
 .cimg{display:block;max-width:min(240px,100%);max-height:300px;border-radius:10px;cursor:zoom-in;min-width:120px;min-height:80px;object-fit:cover;background:rgba(127,127,127,.18)}
 .msg:has(.cimg){padding:6px}
+
+/* admin */
+body:not([data-view="admin"]) .adm{display:none}
+body[data-view="admin"] #safety{display:none}
+.ac{border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px;max-width:900px;background:var(--panel)}
+.ac h3{font-size:22px}
+.aimgs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.aimgs figure{margin:0}
+.aimgs img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;cursor:zoom-in;background:rgba(127,127,127,.15);display:block}
+.aimgs img.id{object-fit:contain}
+.aimgs figcaption{font-size:12px;color:var(--mute);margin-top:4px}
+.achk{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:4px;font-size:14px}
+.achk .ok{color:#15803d}.achk .wn{color:#b45309;font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .achk .ok{color:#4ade80}:root:not([data-theme="light"]) .achk .wn{color:#fbbf24}}
+:root[data-theme="dark"] .achk .ok{color:#4ade80}:root[data-theme="dark"] .achk .wn{color:#fbbf24}
+.arow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.arow input{flex:1;min-width:200px}
+@media(max-width:560px){.aimgs{grid-template-columns:1fr 1fr}}

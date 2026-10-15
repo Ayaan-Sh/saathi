@@ -5,7 +5,7 @@ var CITY={Pune:[18.5204,73.8567],Mumbai:[19.076,72.8777],Ahmedabad:[23.0225,72.5
 var PHS=["linear-gradient(135deg,#ec1d6b,#ff5a2e)","linear-gradient(135deg,#7c3aed,#ec1d6b)","linear-gradient(135deg,#ff5a2e,#ffb347)"];
 var configured=SUPABASE_URL.indexOf("YOUR-PROJECT")<0&&SUPABASE_ANON_KEY.indexOf("YOUR-ANON")<0;
 var sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{flowType:"pkce"}}):null;
-var user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={},HIDDEN=[],NAMES={},PAGE=24,shown=24,stateLoaded=false,authId,rs={};
+var isRev=false,user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={},HIDDEN=[],NAMES={},PAGE=24,shown=24,stateLoaded=false,authId,rs={};
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function inr(n){return "₹"+Number(n).toLocaleString("en-IN")}
 function pubUrl(p){return sb.storage.from("profile-photos").getPublicUrl(p).data.publicUrl}
@@ -90,12 +90,12 @@ function persist(){
 function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(prefs[k]!=null)$(k).value=prefs[k]});
  active=typeof prefs.active=="number"?prefs.active:-1;if($("sort").value=="n"&&!loc)$("sort").value="r";setSeg();renderChips()}
 async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();if(r.error)throw r.error;mine=r.data||null;renderStatus();updateNav();refreshBadge()}
-function ping(){if(user&&document.visibilityState=="visible"){if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
+function ping(){if(user&&document.visibilityState=="visible"){if(isRev)adminBadge();if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
- user=u;stateLoaded=false;HIDDEN=[];renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
+ user=u;isRev=false;stateLoaded=false;HIDDEN=[];renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
  if(u){try{
   try{var nx=sessionStorage.getItem("saathi_next");if(nx){nextHash=nx;sessionStorage.removeItem("saathi_next")}}catch(e){}
-  await loadMine();
+  await loadMine();await checkReviewer();
   var st=await sb.from("user_state").select("prefs,draft").eq("user_id",u.id).maybeSingle();
   if(st.error)throw st.error;await loadHidden();if(!user||user.id!=u.id)return;prefs=(st.data&&st.data.prefs)||{};stateLoaded=true;prefs.draft=(st.data&&st.data.draft&&Object.keys(st.data.draft).length)?st.data.draft:null;
   applyPrefs();presT=setInterval(ping,120000);ping();notifStart();
@@ -117,8 +117,10 @@ $("form").addEventListener("input",function(){prefs.draft=readDraft();persist()}
 function renderStatus(){
  var el=$("lstatus");if(!mine){el.innerHTML="";return}
  var m={pending:"Not verified yet. Verify your ID to go live.",review:"Your ID is under review. You'll go live once approved.",verified:"Verified and live on Saathi.",rejected:"Your verification was rejected. Update your details and verify again.",suspended:"This listing is suspended. Contact support."};
- el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(mine.status)+'</b><br>'+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'</div>';
+ el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(mine.status)+'</b><br>'+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'<span id="rnote"></span></div>';
+ if(mine.status=="rejected")rejectNote();
 }
+async function rejectNote(){var u=user&&user.id;var r=await sb.from("kyc_submissions").select("review_note").eq("user_id",u).eq("status","rejected").order("created_at",{ascending:false}).limit(1);var n=r.data&&r.data[0]&&r.data[0].review_note,el=$("rnote");if(n&&el&&user&&user.id==u)el.innerHTML='<br>Reviewer note: '+esc(n)}
 function formFromListing(){if(!mine)return;fillForm({n:mine.name,a:mine.age,g:mine.gender,c:mine.city,rd:mine.rate_day||"",r:mine.rate_hour||"",b:mine.bio||"",out:mine.available_out,acts:(mine.activities||[]).map(function(k){return KEYS.indexOf(k)})})}
 $("pf").onchange=async function(){var f=this.files[0];if(!f)return;try{photo=await blobOf(f,800);$("pv").src=URL.createObjectURL(photo);$("pv").hidden=false}catch(e){toast("That file isn't a readable image. Use a JPG or PNG.")}};
 $("myloc").onclick=function(){getLoc(function(a,b){myLoc={lat:Math.round(a*100)/100,lng:Math.round(b*100)/100};$("mylocmsg").textContent="Location set to your area. Customers only see distance."})};
@@ -276,7 +278,7 @@ async function finish(){
 }
 
 /* ---------- nav, photos, dashboard ---------- */
-function updateNav(){var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+function updateNav(){$("adminlink").hidden=!isRev;var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
 async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
 async function loadExtras(){
  if(!sb||!DATA.length)return;var my=token;
@@ -652,7 +654,7 @@ async function sendPhoto(file){
 $("pcam").onclick=function(){$("pfcam").click()};
 $("ppic").onclick=function(){$("pffile").click()};
 [$("pfcam"),$("pffile")].forEach(function(inp){inp.onchange=function(){var f=this.files&&this.files[0];this.value="";sendPhoto(f)}});
-document.addEventListener("click",function(e){var im=e.target.closest&&e.target.closest("img.cimg");if(im&&im.src){$("pbody").innerHTML='<img class="gi" alt="Photo" src="'+esc(im.src)+'">';$("pdlg").showModal()}});
+document.addEventListener("click",function(e){var im=e.target.closest&&e.target.closest("img.cimg,img.zoom");if(im&&im.src){$("pbody").innerHTML='<img class="gi" alt="Photo" src="'+esc(im.src)+'">';$("pdlg").showModal()}});
 $("pcreport").onclick=function(){if(cs.id)openReport(cs.id)};
 $("pcf").onsubmit=async function(e){
  e.preventDefault();var t=$("pcin").value.trim();if(!t||!cs.id)return;
@@ -663,17 +665,73 @@ $("pcf").onsubmit=async function(e){
  $("pcerr").textContent="";$("pcin").value="";cs.seen[r.data.id]=r.data;cs.fresh=true;chatDraw();cs.fresh=false;$("pcin").focus();chatsRefresh();
 };
 
+/* ---------- admin: verification queue ---------- */
+var AQ={t:null};
+async function checkReviewer(){
+ var me=user&&user.id;if(!sb||!me)return;
+ var r=await sb.rpc("is_reviewer");
+ if(user&&user.id==me){isRev=r.data===true;updateNav();if(isRev)adminBadge()}
+}
+async function adminBadge(){
+ if(!isRev||!sb)return;
+ var r=await sb.from("kyc_submissions").select("id",{count:"exact",head:true}).eq("status","submitted");
+ if(r.error)return;var n=r.count||0;$("adminlink").innerHTML="Admin"+(n?' <span class="dn">'+n+'</span>':'');
+}
+function ageFrom(d){var b=new Date(d),n=new Date(),y=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();if(m<0||(m==0&&n.getDate()<b.getDate()))y--;return y}
+function adminCard(k,c,U){
+ var ag=ageFrom(k.dob),ct=[];
+ ct.push([ag>=18,ag>=18?"Date of birth shows "+ag+" years old":"Under 18 by date of birth ("+ag+"). Reject."]);
+ ct.push([c.age==null||Math.abs(c.age-ag)<=1,c.age==null||Math.abs(c.age-ag)<=1?"Listed age ("+c.age+") matches the date of birth":"Listed age ("+c.age+") does not match the date of birth ("+ag+")"]);
+ ct.push([!!(U[k.id_image_path]&&U[k.selfie_path]),U[k.id_image_path]&&U[k.selfie_path]?"ID photo and selfie both uploaded":"An ID photo or selfie is missing or can't be opened"]);
+ ct.push([!!c.photo_path,c.photo_path?"Profile photo uploaded":"No profile photo"]);
+ var fig=function(src,cap,cls){return '<figure>'+(src?'<img class="zoom '+cls+'" src="'+esc(src)+'" alt="'+esc(cap)+'">':'<div class="empty" style="padding:30px 6px">Missing</div>')+'<figcaption>'+esc(cap)+'</figcaption></figure>'};
+ var nm=c.name||"Unknown";
+ return '<div class="ac" data-n="'+esc(nm)+'"><h3>'+esc(nm)+'</h3><p class="meta">'+esc((c.gender=="F"?"Woman":c.gender=="M"?"Man":"")+(c.city?" \u00b7 "+c.city:"")+" \u00b7 DOB "+k.dob+" \u00b7 "+String(k.id_type).replace("_"," ")+" \u00b7 submitted "+ago(+new Date(k.created_at)))+'</p>'
+  +'<div class="aimgs">'+fig(c.photo_path?pubUrl(c.photo_path):"","Profile photo","")+fig(U[k.id_image_path],"ID","id")+fig(U[k.selfie_path],"Selfie","")+'</div>'
+  +'<ul class="achk">'+ct.map(function(x){return '<li class="'+(x[0]?'ok':'wn')+'">'+(x[0]?'\u2713 ':'\u26a0 ')+esc(x[1])+'</li>'}).join("")+'</ul>'
+  +'<div class="arow"><input class="rs" maxlength="300" placeholder="Reason (required to reject, shown to the person)" aria-label="Reason"><button class="btn" type="button" data-a="approve" data-id="'+esc(k.id)+'">Approve</button><button class="btn alt" type="button" data-a="reject" data-id="'+esc(k.id)+'">Reject</button></div></div>';
+}
+async function loadAdmin(){
+ var el=$("aq");if(!isRev||!sb)return;
+ if(!el.querySelector(".ac"))el.innerHTML='<p class="meta" style="margin-top:16px">Loading...</p>';
+ var r=await sb.from("kyc_submissions").select("id,user_id,id_type,dob,id_image_path,selfie_path,created_at").eq("status","submitted").order("created_at");
+ if(r.error){el.innerHTML='<p class="meta" style="margin-top:16px">Couldn\'t load the queue. '+esc(r.error.message)+'</p>';return}
+ adminBadge();
+ if(!r.data.length){el.innerHTML='<div class="empty" style="margin-top:16px">No one is waiting. New applications show up here.</div>';return}
+ var cp=await sb.from("companions").select("user_id,name,age,gender,city,photo_path").in("user_id",r.data.map(function(x){return x.user_id})),C={};
+ (cp.data||[]).forEach(function(x){C[x.user_id]=x});
+ var paths=[];r.data.forEach(function(k){if(k.id_image_path)paths.push(k.id_image_path);if(k.selfie_path)paths.push(k.selfie_path)});
+ var U={};if(paths.length){var sg=await sb.storage.from("kyc-private").createSignedUrls(paths,1800);(sg.data||[]).forEach(function(x){if(x.signedUrl)U[x.path]=x.signedUrl})}
+ el.innerHTML=r.data.map(function(k){return adminCard(k,C[k.user_id]||{},U)}).join("");
+}
+function autoAdmin(){var el=$("aq");if(document.visibilityState!="visible")return;var busy=[].some.call(el.querySelectorAll(".rs"),function(i){return i.value||document.activeElement==i})||el.querySelector("button:disabled");if(!busy)loadAdmin()}
+$("aref").onclick=loadAdmin;
+$("aq").onclick=async function(e){
+ var b=e.target.closest("button[data-a]");if(!b)return;
+ var card=b.closest(".ac"),rs=card.querySelector(".rs"),note=rs.value.trim(),dec=b.dataset.a=="approve"?"approved":"rejected";
+ if(dec=="rejected"&&!note){toast("Add a reason so the person knows what to fix.");rs.focus();return}
+ if(dec=="approved"&&!confirm("Approve "+card.dataset.n+"? Their listing goes live."))return;
+ var bs=card.querySelectorAll("button");bs.forEach(function(x){x.disabled=true});
+ var r=await sb.rpc("admin_review_kyc",{p_id:b.dataset.id,p_decision:dec,p_note:note||null});
+ if(r.error){toast(r.error.message);bs.forEach(function(x){x.disabled=false});return}
+ card.remove();toast(dec=="approved"?"Approved. They are live.":"Rejected. They can fix it and apply again.");
+ adminBadge();if(!$("aq").querySelector(".ac"))loadAdmin();
+};
+
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
- var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":"home";
- if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
+ var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":"home";
+ if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats"||v=="admin")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
  var pv=document.body.dataset.view;document.body.dataset.view=v;
  if(pv!==v)window.scrollTo(0,0);
  if(v=="home"&&ANCH[h]){var t=document.getElementById(h.slice(1));if(t)t.scrollIntoView()}
  if(user)persist();
  if(v=="verify"&&mine&&mine.status=="verified"){location.hash="#/";return}
  if(v=="verify"&&pv!="verify")startVerify();
+ clearInterval(AQ.t);
+ if(v=="admin"&&!isRev){location.hash="#/";return}
+ if(v=="admin"){loadAdmin();AQ.t=setInterval(autoAdmin,60000)}
  if(pv=="chats"&&v!="chats")chatStop();
  if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();
