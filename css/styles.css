@@ -29,7 +29,8 @@ select,input,textarea{font:inherit;color:var(--ink);background:var(--panel);bord
 .ph{width:100%;aspect-ratio:4/5;object-fit:cover;display:grid;place-items:center;font:600 80px "Instrument Sans",system-ui,sans-serif;color:rgba(255,255,255,.9)}
 .card:hover .ph,.card:focus-within .ph{filter:none}
 .meta{color:var(--mute);font-size:14px}
-.ver{color:var(--accent2);font-weight:700;font-size:13px}
+.ver{color:var(--accent2);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+.tick{width:18px;height:18px;flex:none}
 .acts{display:flex;flex-wrap:wrap;gap:6px}.acts span{border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:13px}
 .price{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line)}
 .price b{font:700 24px "Instrument Sans",system-ui,sans-serif}
@@ -255,3 +256,12 @@ body[data-view="admin"] #safety{display:none}
 .brow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .brow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .btn{padding:8px 16px;font-size:13px}
+/* settings, onboarding, delete */
+body:not([data-view="settings"]) .stv{display:none}
+body[data-view="settings"] #safety{display:none}
+.stbox{max-width:520px;margin-top:18px}
+.stbox h3{margin:32px 0 6px;font-size:19px}
+.stbox h3:first-child{margin-top:0}
+.stbox label{display:block;margin:14px 0 6px;font-weight:600}
+.btn.danger{background:#b3261e;color:#fff;border:0}
+#oform label{display:block;margin:14px 0 6px;font-weight:600}

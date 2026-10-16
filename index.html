@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Saathiyaa – meet a companion for garba, dinners and events</title>
-<meta name="description" content="Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.">
+<meta name="description" content="Companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.">
 <meta property="og:title" content="Saathiyaa – don't do garba alone">
-<meta property="og:description" content="Verified companions for garba, dandiya, dinners and weddings. Public places only.">
+<meta property="og:description" content="Companions for garba, dandiya, dinners and weddings. Public places only.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#d6125a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23d6125a'/%3E%3Ctext x='32' y='44' font-size='36' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
@@ -19,9 +19,9 @@
 <body data-view="home">
 <noscript><p style="padding:24px;text-align:center">Saathiyaa needs JavaScript. Please enable it to continue.</p></noscript>
 <div class="topbg"><div class="wrap">
-<nav><span class="logo">Saathiyaa</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My meets</a><a href="#/verify" id="verlink" hidden>Verify ID</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
+<nav><span class="logo">Saathiyaa</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My meets</a><a href="#/verify" id="verlink" hidden>Get ID verified</a><a href="#/settings" id="setlink" hidden>Settings</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
 
-<header class="hero home"><h1>Don't do garba alone.</h1><p>Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
+<header class="hero home"><h1 id="herotitle">Don't do garba alone.</h1><p id="herosub">Companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
 <div class="cta"><a class="btn white" href="#browse">Find a companion</a><a class="btn ghost" href="#/list">List yourself</a></div></header>
 </div></div>
 <div class="wrap">
@@ -48,15 +48,15 @@
 <section id="login" class="lgv"><div class="lgbox"><h2>Log in to Saathiyaa</h2>
 <p class="meta" id="lgmsg" style="margin:10px 0 18px">Log in to pick up where you left off.</p>
 <button class="btn" id="gbtn" type="button" style="width:100%">Continue with Google</button>
-<p class="note" style="margin-top:18px">You must be 18 or older. Signing in does not prove your age, so every listing needs ID verification.</p>
+<p class="note" style="margin-top:18px">You must be 18 or older. Signing in does not prove your age. Only profiles with the pink ID verified tick have been checked.</p>
 <p class="meta" style="margin-top:14px">By continuing you agree to the <a href="terms.html" style="color:var(--accent2)">Terms</a> and <a href="privacy.html" style="color:var(--accent2)">Privacy Policy</a>.</p></div></section>
 <section id="bookings" class="bkv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><h2>My meets</h2><div id="bklist"></div></section>
 <section id="why" class="home"><h2>Why Saathiyaa</h2>
 <p class="meta" style="max-width:52ch;margin-top:12px">Saathiyaa comes from saathi, the Hindi and Gujarati word for companion. We built it for the nights you want company, not a crowd.</p>
 <div class="why">
-<div><h3>Made for garba season</h3><p>Dandiya partners, wedding plus-ones and dinner company, found by activity instead of guesswork.</p></div>
-<div><h3>Verified, every time</h3><p>Every companion passes an ID and selfie check, then a human review, before they appear as verified.</p></div>
-<div><h3>Both sides choose</h3><p>Companions accept or decline every meet request and every chat request. No one is ever assigned.</p></div>
+<div><h3 id="why1h">Made for garba season</h3><p id="why1p">Dandiya partners, wedding plus-ones and dinner company, found by activity instead of guesswork.</p></div>
+<div><h3>Verify for a pink tick</h3><p>ID verification is optional. People who pass an ID and selfie check and a human review get a pink tick next to ID verified on their card.</p></div>
+<div><h3>Both sides choose</h3><p>Companions accept or decline every meet request and every chat request. No one is ever assigned. You only see, and are only seen by, people who want to meet someone like you.</p></div>
 <div><h3>Safe by design</h3><p>Every meet request names a public place, chat opens only after the other person accepts, you can share meet details with a friend in one tap, and you can report or block anyone.</p></div>
 <div><h3>Free to use</h3><p>Chat and meet requests cost nothing while we launch. No money changes hands through Saathiyaa.</p></div>
 <div><h3>Near you</h3><p>Share your location and see who is available around you, sorted by distance.</p></div>
@@ -66,10 +66,10 @@
 <div>
 <h2 id="ltitle">List yourself as a companion</h2>
 <p style="color:var(--mute)">Pick your activities and city. You approve every meet request and chat request, and you can decline or block anyone, any time.</p>
-<div class="note" style="margin-top:14px">Listings go live after ID and selfie verification. Your listing is visible to others only after that review.</div>
+<div class="note" style="margin-top:14px">Your listing goes live as soon as you save it. ID verification is optional. Verify later to get a pink tick next to ID verified on your card.</div>
 </div>
 <div><form id="form">
-<label for="pf">Your photo</label><input id="pf" type="file" accept="image/*"><img id="pv" alt="Your photo preview" hidden><p class="meta">Use a clear photo of yourself. It is matched against your selfie at verification.</p>
+<label for="pf">Your photo</label><input id="pf" type="file" accept="image/*"><img id="pv" alt="Your photo preview" hidden><p class="meta">Use a clear photo of yourself. If you verify your ID later, it is matched against your selfie.</p>
 <p class="meta" id="lockmsg" hidden>Your name, gender and main photo are locked because you are verified. Contact support to change them.</p>
 <div class="frow na"><div><label for="n">Name</label><input id="n" required maxlength="40"></div><div><label for="a">Age</label><input id="a" type="number" min="18" max="80" required placeholder="18+"></div></div>
 <div class="frow"><div><label for="g">I am</label><select id="g"><option value="F">Woman</option><option value="M">Man</option></select></div><div><label for="c">City</label><select id="c"><option>Pune</option><option>Mumbai</option><option>Ahmedabad</option><option>Vadodara</option><option>Surat</option></select></div></div>
@@ -93,7 +93,7 @@
 
 <section id="verify" class="vw"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
 <h2>Verify your identity</h2>
-<p class="meta" style="max-width:56ch">An assistant guides you through age, ID and selfie checks. A human reviewer approves every application before you go live.</p>
+<p class="meta" style="max-width:56ch">Optional. An assistant guides you through age, ID and selfie checks. A human reviewer approves each application, and you get a pink tick on your card once approved. You stay live while you wait.</p>
 <div class="chat" id="chat" aria-live="polite"></div><div class="reply" id="reply"></div></section>
 
 <section id="chats" class="chv"><div class="cpg" id="cpg">
@@ -115,11 +115,30 @@
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Verification queue</h2><button class="btn alt" id="aref" type="button">Refresh</button></div>
 <p class="meta" style="max-width:62ch;margin-top:10px">New applicants appear here. The checks below are automatic, but you still compare the faces yourself: selfie against the ID and the profile photo. Nobody goes live until you approve.</p>
 <div id="aq"></div></section>
+<section id="settings" class="stv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
+<h2>Settings</h2>
+<div class="stbox">
+<h3>Who you want to meet</h3>
+<p class="meta">Only people who want to meet someone like you can see your profile, and you only see people who fit what you choose here. You can change this any time.</p>
+<label for="sg">I am</label><select id="sg"><option value="" disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
+<p class="meta" id="slock" hidden>Your gender is locked because your ID is verified. Contact support to change it.</p>
+<label for="si">I want to meet</label><select id="si"><option value="" disabled>Choose</option><option value="F">Women</option><option value="M">Men</option><option value="B">Both</option></select>
+<div style="margin-top:16px"><button class="btn" id="ssave" type="button">Save</button></div>
+<div id="pausebox" hidden>
+<h3>Pause your profile</h3>
+<p class="meta" id="pstat"></p>
+<p class="meta" style="margin-top:6px">While paused, nobody can find you, and you can still browse and message people. Existing chats and accepted meets are not affected.</p>
+<div style="margin-top:12px"><button class="btn alt" id="spause" type="button">Pause my profile</button></div>
+</div>
+<h3>Delete account</h3>
+<p class="meta">This permanently deletes your account, listing, photos, chats and meet requests. It can't be undone.</p>
+<div style="margin-top:12px"><button class="btn danger" id="sdel" type="button">Delete my account</button></div>
+</div></section>
 <section id="safety">
 <h2 style="margin-bottom:18px">Built so both sides feel safe</h2>
 <div class="safe">
 <div><b>Public venues only</b>Every request must name a public place such as a garba ground, café, restaurant or event hall, and the other person confirms it in the request.</div>
-<div><b>Verified profiles</b>18+ with ID and selfie check, then a human review, before a listing goes live.</div>
+<div><b>Optional ID verification</b>Anyone can join. People who complete an ID and selfie check and a human review get a pink tick, so you can tell who is verified.</div>
 <div><b>Report and block</b>Report anyone from a chat or a meet request and block them in the same step. Blocked people can no longer see or contact you, and you can unblock anyone from the Chats page.</div>
 <div><b>Share and emergency</b>Share meet details with a trusted friend, and call 112 straight from any accepted meet.</div>
 </div>
@@ -148,6 +167,17 @@
 <label class="chk"><input type="checkbox" id="rblock" checked> Also block this person and cancel any meet request</label>
 <p class="meta" id="rerr" role="alert" style="color:#d33;margin-top:8px"></p>
 <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send report</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div></form></dialog>
+<dialog id="odlg" aria-labelledby="ottl"><form id="oform"><h2 id="ottl" style="font-size:22px">Before you start</h2>
+<p class="meta" style="margin-top:6px">Tell us who you want to meet. Only people who want to meet someone like you can see your profile, and you only see people who fit what you choose. You can change this later in Settings.</p>
+<label for="og">I am</label><select id="og"><option value="" selected disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
+<label for="oi">I want to meet</label><select id="oi"><option value="" selected disabled>Choose</option><option value="F">Women</option><option value="M">Men</option><option value="B">Both</option></select>
+<p class="meta" id="oerr" role="alert" style="color:#d33;margin-top:8px"></p>
+<div style="margin-top:14px"><button class="btn" type="submit">Continue</button></div></form></dialog>
+<dialog id="ddlg" aria-labelledby="dttl"><h2 id="dttl" style="font-size:22px">Delete your account?</h2>
+<p class="meta" style="margin-top:6px">Everything is removed for good: your profile, photos, chats and meet requests. Type DELETE to confirm.</p>
+<input id="dtxt" autocomplete="off" aria-label="Type DELETE to confirm" style="margin-top:12px">
+<p class="meta" id="derr" role="alert" style="color:#d33;margin-top:8px"></p>
+<div style="display:flex;gap:10px;margin-top:14px"><button class="btn danger" id="dgo" type="button">Delete forever</button><button class="btn alt" id="dcancel" type="button">Cancel</button></div></dialog>
 <div class="toast" id="toast" role="status"></div>
 <button class="nbanner" id="nbanner" type="button" aria-live="polite"></button>
 

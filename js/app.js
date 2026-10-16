@@ -7,6 +7,19 @@ var configured=SUPABASE_URL.indexOf("YOUR-PROJECT")<0&&SUPABASE_ANON_KEY.indexOf
 var sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{flowType:"pkce"}}):null;
 var isRev=false,user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={},HIDDEN=[],NAMES={},PAGE=24,shown=24,stateLoaded=false,authId,rs={};
 var PAID=false; /* prices and payments stay hidden until this is true */
+var MP=null; /* my preferences: {gender, interested_in} */
+var GARBA_ENDS=new Date("2026-10-21T00:00:00+05:30"); /* after this moment the garba copy switches to the general copy */
+var TICK='<svg class="tick" viewBox="0 0 24 24" role="img" aria-label="Verified"><circle cx="12" cy="12" r="11" fill="#ff4fa3"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function seasonCopy(){
+ if(Date.now()<GARBA_ENDS.getTime())return;
+ $("herotitle").textContent="Someone to go with.";
+ $("herosub").textContent="Companions for dinners, events, weddings and festivals. Public places only, and you choose who to meet.";
+ $("why1h").textContent="Made for every occasion";
+ $("why1p").textContent="Dinner company, wedding plus-ones and festival walks, found by activity instead of guesswork.";
+ $("mtxt").placeholder="Hi! I'm looking for company this Saturday.";
+ document.title="Saathiyaa – meet a companion for dinners, events and festivals";
+}
+seasonCopy();
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function inr(n){return "₹"+Number(n).toLocaleString("en-IN")}
 function pubUrl(p){return sb.storage.from("profile-photos").getPublicUrl(p).data.publicUrl}
@@ -26,7 +39,7 @@ async function nameFor(ids){var need=ids.filter(function(i,ix,a){return i&&(!NAM
 async function loadHidden(){HIDDEN=[];if(!user||!sb)return;var r=await sb.rpc("hidden_companions");HIDDEN=r.error?[]:(r.data||[])}
 
 /* ---------- data ---------- */
-function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,out:r.available_out!==false,d:r.distance_km,extra:[]}}
+function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,v:!!r.id_verified,out:r.available_out!==false,d:r.distance_km,extra:[]}}
 async function load(){
  if(!sb){renderOnline();renderGrid();return}
  if(loc&&!user){loc=null;ui()}
@@ -48,11 +61,11 @@ function renderOnline(){
 }
 function renderGrid(){
  var all=DATA.filter(function(p){return p.out}),l=all.slice(0,shown),el=$("grid");$("gc").textContent=all.length+" available";$("more").hidden=all.length<=shown;$("more").textContent="Show more ("+Math.max(0,all.length-shown)+" more)";
- if(!l.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(configured?(loc?'No one nearby yet. Widen the distance, or list yourself.':'No companions in this city yet. Try another city or activity, or list yourself.'):'Add your Supabase URL and anon key to see companions.')+'</div>';return}
+ if(!l.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(configured?(!user?'Log in and tell us who you want to meet to see people. <a href="#/login" style="color:var(--accent2);font-weight:700">Log in</a>':loc?'No one nearby yet. Widen the distance, or list yourself.':'No companions in this city yet. Try another city or activity, or list yourself.'):'Add your Supabase URL and anon key to see companions.')+'</div>';return}
  el.innerHTML=l.map(function(p){
   var price=!PAID?'':(p.day?'<b>'+inr(p.day)+'</b> /day':'')+(p.day&&p.hr?'<br>':'')+(p.hr?(p.day?'<span class="meta">':'<b>')+inr(p.hr)+(p.day?'</span>':'</b>')+' /hr':'');
   return '<article class="card">'+media(p)+'<div class="bd"><div><h3>'+esc(p.n)+', '+esc(p.a)+'</h3><div class="meta">'+where(p)+(p.rt?' · ★ '+p.rt.toFixed(1):' · New')+'</div></div>'
-  +'<div class="ver">ID verified</div>'+(p.online?'<div class="onl">● Online now</div>':'')
+  +(p.v?'<div class="ver"><span>ID verified</span>'+TICK+'</div>':'')+(p.online?'<div class="onl">● Online now</div>':'')
   +'<div class="acts">'+p.acts.map(function(i){return '<span>'+esc(ACTS[i])+'</span>'}).join("")+'</div>'
   +'<div class="meta">'+esc(p.b)+'</div>'+(p.extra&&p.extra.length?'<button class="more" type="button" data-ph="'+esc(p.id)+'">See all photos ('+(p.extra.length+(p.photo?1:0))+')</button>':'')
   +'<div class="price"><span>'+price+'</span><div class="pbtns"><button class="btn alt" data-msg="'+esc(p.id)+'">Message</button><button class="btn" data-id="'+esc(p.id)+'">Meet</button></div></div></div></article>'}).join("");
@@ -96,21 +109,21 @@ function persist(){
 function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(prefs[k]!=null)$(k).value=prefs[k]});
  active=typeof prefs.active=="number"?prefs.active:-1;if($("sort").value=="n"&&!loc)$("sort").value="r";setSeg();renderChips()}
 async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();if(r.error)throw r.error;mine=r.data||null;renderStatus();updateNav();refreshBadge()}
-function ping(){if(user&&document.visibilityState=="visible"){if(isRev)adminBadge();if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false)sb.rpc("touch_presence");refreshBadge()}}
+function ping(){if(user&&document.visibilityState=="visible"){if(isRev)adminBadge();if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false&&!(mine&&mine.paused))sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
- user=u;isRev=false;stateLoaded=false;HIDDEN=[];renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
+ user=u;isRev=false;stateLoaded=false;HIDDEN=[];MP=null;renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
  if(u){try{
   try{var nx=sessionStorage.getItem("saathi_next");if(nx){nextHash=nx;sessionStorage.removeItem("saathi_next")}}catch(e){}
-  await loadMine();await checkReviewer();
+  await loadMine();await loadMP();await checkReviewer();
   var st=await sb.from("user_state").select("prefs,draft").eq("user_id",u.id).maybeSingle();
   if(st.error)throw st.error;await loadHidden();if(!user||user.id!=u.id)return;prefs=(st.data&&st.data.prefs)||{};stateLoaded=true;prefs.draft=(st.data&&st.data.draft&&Object.keys(st.data.draft).length)?st.data.draft:null;
-  applyPrefs();presT=setInterval(ping,120000);ping();notifStart();
+  applyPrefs();presT=setInterval(ping,120000);ping();notifStart();applySeg();needPrefs();
   var fromLogin=location.hash=="#/login";
   if(nextHash){var go=nextHash;nextHash="";location.hash=go}
   else if(fromLogin||!location.hash){location.hash=prefs.hash&&prefs.hash!="#/login"?prefs.hash:"#/"}
   if(fromLogin)toast("Welcome back. Picking up where you left off.");
  }catch(e){console.error("Saathiyaa: sign-in setup failed",e);toast("Signed in, but couldn't load your saved data. Check the browser console.")}}
- route();load();
+ applySeg();route();load();
 }
 
 /* ---------- listing ---------- */
@@ -122,8 +135,11 @@ function fillForm(d){FIELDS.forEach(function(k){if(d[k]!=null)$(k).value=d[k]});
 $("form").addEventListener("input",function(){prefs.draft=readDraft();persist()});
 function renderStatus(){
  var el=$("lstatus");if(!mine){el.innerHTML="";return}
- var m={pending:"Not verified yet. Verify your ID to go live.",review:"Your ID is under review. You'll go live once approved.",verified:"Verified and live on Saathiyaa.",rejected:"Your verification was rejected. Update your details and verify again.",suspended:"This listing is suspended. Contact support."};
- el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(mine.status)+'</b><br>'+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'<span id="rnote"></span></div>';
+ var m={pending:"You're live. Verify your ID (optional) to get a pink tick next to ID verified on your card.",review:"Your ID is under review. You stay live while you wait.",verified:"Your ID is verified. Your card shows the pink tick.",rejected:"Your ID verification was rejected, but you are still live. Update your details and verify again if you like.",suspended:"This listing is suspended. Contact support."},
+  L={pending:"Live, ID not verified",review:"Live, ID under review",verified:"Live, ID verified",rejected:"Live, ID not verified",suspended:"Suspended"},
+  ttl=mine.status!="suspended"&&mine.paused?"Paused":(L[mine.status]||mine.status),
+  pre=mine.status!="suspended"&&mine.paused?'Nobody can see your profile right now. <a href="#/settings" style="color:var(--accent2);font-weight:700">Unpause in Settings</a><br>':'';
+ el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(ttl)+'</b><br>'+pre+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'<span id="rnote"></span></div>';
  if(mine.status=="rejected")rejectNote();
 }
 async function rejectNote(){var u=user&&user.id;var r=await sb.from("kyc_submissions").select("review_note").eq("user_id",u).eq("status","rejected").order("created_at",{ascending:false}).limit(1);var n=r.data&&r.data[0]&&r.data[0].review_note,el=$("rnote");if(n&&el&&user&&user.id==u)el.innerHTML='<br>Reviewer note: '+esc(n)}
@@ -135,6 +151,7 @@ $("form").onsubmit=async function(e){
  e.preventDefault();if(!sb||!user)return;
  var age=+$("a").value,hr=+$("r").value||null,day=+$("rd").value||null;
  if(age<18){toast("You must be 18 or older to list yourself.");return}
+ if(!MP){toast("Tell us who you want to meet first.");needPrefs();return}
  if(!photo&&!(mine&&mine.photo_path)){toast("Add a clear photo of yourself.");return}
  if(PAID&&!hr&&!day){toast("Set a day rate, an hourly rate, or both.");return}
  var sel=[].slice.call(ac.querySelectorAll("input:checked")).map(function(x){return KEYS[+x.value]});
@@ -147,11 +164,11 @@ $("form").onsubmit=async function(e){
   var row={name:$("n").value.trim(),age:age,gender:$("g").value,city:c,bio:$("b").value.trim()||null,activities:sel,rate_hour:hr,rate_day:day,available_out:$("goout").checked,photo_path:path,location:"SRID=4326;POINT("+pt.lng+" "+pt.lat+")"};
   var r=mine?await sb.from("companions").update(row).eq("id",mine.id).select().single():await sb.from("companions").insert(Object.assign({user_id:user.id},row)).select().single();
   if(r.error)throw r.error;
-  var first=!mine||mine.status=="pending"||mine.status=="rejected";
+  var hadListing=!!mine,first=!mine||mine.status=="pending"||mine.status=="rejected";
   if(photo&&oldPath&&oldPath!=path)sb.storage.from("profile-photos").remove([oldPath]);
   mine=r.data;prefs.draft=null;persist();photo=null;updateNav();renderStatus();
-  if(first){$("pv").hidden=true;toast("Listing saved. Next, verify your ID so it can go live.");location.hash="#/verify"}
-  else{listMode();toast("Profile updated.")}
+  if(first)$("pv").hidden=true;
+  listMode();toast(hadListing?"Profile updated.":"Your listing is live. Verify your ID any time to get a pink tick.")
  }catch(err){toast("Couldn't save your listing. "+(err.message||""))}
  if(btn)btn.disabled=false;
 };
@@ -246,7 +263,7 @@ function startVerify(){
  if(!mine){say("Create your listing first, then come back here to verify.");$("reply").innerHTML='<a class="btn" href="#/list" style="text-decoration:none;display:inline-block">Create a listing</a>';return}
  if(mine.status=="verified"){say("You're already verified and live.");done();return}
  if(mine.status=="review"){say("Your documents are already with a reviewer. We'll let you know once they're approved.");done();return}
- say("Hi "+mine.name+". I'll collect your age, ID and a selfie, which takes about three minutes. A human reviewer checks everything before you go live. By continuing you agree that Saathiyaa may use your ID and selfie only to verify you, as described in the Privacy Policy.");
+ say("Hi "+mine.name+". I'll collect your age, ID and a selfie, which takes about three minutes. A human reviewer checks everything before your pink tick appears. Verifying is optional and you stay live meanwhile. By continuing you agree that Saathiyaa may use your ID and selfie only to verify you, as described in the Privacy Policy.");
  choices(["I agree and start"],s1)
 }
 function s1(){say("First, your date of birth. You must be 18 or older.");
@@ -284,7 +301,7 @@ async function finish(){
 }
 
 /* ---------- nav, photos, dashboard ---------- */
-function updateNav(){$("adminlink").hidden=!isRev;var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+function updateNav(){$("setlink").hidden=!user;$("adminlink").hidden=!isRev;var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
 async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
 async function loadExtras(){
  if(!sb||!DATA.length)return;var my=token;
@@ -304,7 +321,7 @@ $("pclose").onclick=function(){$("pdlg").close()};
 /* edit profile + extra photos */
 var gal=[];
 function listMode(){
- var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;var lk=ed&&mine.status=="verified";["pf","n","g"].forEach(function(k){$(k).disabled=lk});$("lockmsg").hidden=!lk;$("showwrap").hidden=!ed;$("showon").checked=prefs.showOnline!==false;
+ var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;var lk=ed&&mine.status=="verified";["pf","n"].forEach(function(k){$(k).disabled=lk});$("g").disabled=lk||!!MP;if(MP)$("g").value=MP.gender;$("lockmsg").hidden=!lk;$("showwrap").hidden=!ed;$("showon").checked=prefs.showOnline!==false;
  if(ed&&mine.photo_path&&!photo){$("pv").src=pubUrl(mine.photo_path);$("pv").hidden=false}
  if(ed)renderGal();
 }
@@ -839,11 +856,71 @@ $("aq").onclick=async function(e){
  adminBadge();if(!$("aq").querySelector(".ac"))loadAdmin();
 };
 
+/* ---------- preferences, pause, delete ---------- */
+async function loadMP(){
+ MP=null;if(!sb||!user)return;
+ var r=await sb.from("member_prefs").select("gender,interested_in").eq("user_id",user.id).maybeSingle();
+ if(r.error){console.error("Saathiyaa: couldn't load preferences",r.error);return}
+ MP=r.data||null}
+function needPrefs(){
+ if(!sb||!user||MP)return;
+ var d=$("odlg");if(mine&&mine.gender)$("og").value=mine.gender;
+ if(!d.open)d.showModal()}
+$("odlg").addEventListener("cancel",function(e){e.preventDefault()});
+$("oform").onsubmit=async function(e){
+ e.preventDefault();var g=$("og").value,i=$("oi").value;
+ if(!g||!i){$("oerr").textContent="Please choose both.";return}
+ var btn=e.submitter;if(btn)btn.disabled=true;
+ var ok=await savePrefs(g,i);if(btn)btn.disabled=false;
+ if(ok){$("oerr").textContent="";$("odlg").close()}else $("oerr").textContent="Couldn't save. Please try again."};
+async function savePrefs(g,i){
+ var r=await sb.from("member_prefs").upsert({user_id:user.id,gender:g,interested_in:i,updated_at:new Date().toISOString()});
+ if(r.error){console.error("Saathiyaa: couldn't save preferences",r.error);return false}
+ MP={gender:g,interested_in:i};
+ if(mine&&mine.status!="verified"&&mine.gender!=g){var u=await sb.from("companions").update({gender:g}).eq("id",mine.id).select().single();if(!u.error)mine=u.data}
+ applySeg();load();return true}
+/* the Find a man / woman buttons only make sense for people who want to meet both */
+function applySeg(){
+ var one=!!MP&&MP.interested_in!="B";$("seg").style.display=one?"none":"";
+ if(one&&$("gender").value){$("gender").value="";setSeg();persist()}}
+function paintPause(){
+ if(!mine)return;
+ $("pstat").textContent=mine.paused?"Your profile is paused. Nobody can see it, but you can still browse and message people.":"Your profile is visible to people who want to meet someone like you.";
+ $("spause").textContent=mine.paused?"Unpause my profile":"Pause my profile"}
+function renderSettings(){
+ if(!user)return;
+ var ver=!!(mine&&mine.status=="verified");
+ $("sg").value=MP?MP.gender:(mine?mine.gender:"");$("si").value=MP?MP.interested_in:"";
+ $("sg").disabled=ver;$("slock").hidden=!ver;$("pausebox").hidden=!mine;paintPause()}
+$("ssave").onclick=async function(){
+ var g=$("sg").value,i=$("si").value;if(!g||!i){toast("Choose both options.");return}
+ this.disabled=true;var ok=await savePrefs(g,i);this.disabled=false;
+ toast(ok?"Saved.":"Couldn't save. Please try again.")};
+$("spause").onclick=async function(){
+ if(!mine)return;var b=this;b.disabled=true;var p=!mine.paused,row={paused:p};if(p)row.last_seen=null;
+ var r=await sb.from("companions").update(row).eq("id",mine.id).select().single();b.disabled=false;
+ if(r.error){toast("Couldn't update your profile. "+(r.error.message||""));return}
+ mine=r.data;paintPause();renderStatus();toast(p?"Profile paused.":"Your profile is visible again.");load()};
+$("sdel").onclick=function(){$("dtxt").value="";$("derr").textContent="";$("ddlg").showModal()};
+$("dcancel").onclick=function(){$("ddlg").close()};
+$("dgo").onclick=async function(){
+ if($("dtxt").value.trim()!="DELETE"){$("derr").textContent="Type DELETE to confirm.";return}
+ var b=this;b.disabled=true;$("derr").textContent="";
+ try{
+  var uid=user.id,st=sb.storage.from("profile-photos"),l=await st.list(uid,{limit:1000});
+  if(l.data&&l.data.length)await st.remove(l.data.map(function(f){return uid+"/"+f.name}));
+  var r=await sb.rpc("delete_my_account");if(r.error)throw r.error;
+  $("ddlg").close();
+  try{await sb.auth.signOut({scope:"local"})}catch(x){}
+  location.hash="#/";toast("Your account has been deleted.")
+ }catch(err){$("derr").textContent="Couldn't delete your account. "+(err.message||"")}
+ b.disabled=false};
+
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
- var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":"home";
- if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats"||v=="admin")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
+ var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":h=="#/settings"?"settings":"home";
+ if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats"||v=="admin"||v=="settings")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
  var pv=document.body.dataset.view;document.body.dataset.view=v;
  if(pv!==v)window.scrollTo(0,0);
  if(v=="home"&&ANCH[h]){var t=document.getElementById(h.slice(1));if(t)t.scrollIntoView()}
@@ -857,6 +934,7 @@ function route(){
  if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();
  if(v=="dashboard")loadDash();
+ if(v=="settings")renderSettings();
  if(v=="list"){renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
 }
 window.addEventListener("hashchange",route);
