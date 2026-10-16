@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Saathi – book a companion for garba, dinners and events</title>
+<title>Saathiyaa – meet a companion for garba, dinners and events</title>
 <meta name="description" content="Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.">
-<meta property="og:title" content="Saathi – don't do garba alone">
+<meta property="og:title" content="Saathiyaa – don't do garba alone">
 <meta property="og:description" content="Verified companions for garba, dandiya, dinners and weddings. Public places only.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#d6125a">
@@ -17,9 +17,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 </head>
 <body data-view="home">
-<noscript><p style="padding:24px;text-align:center">Saathi needs JavaScript. Please enable it to continue.</p></noscript>
+<noscript><p style="padding:24px;text-align:center">Saathiyaa needs JavaScript. Please enable it to continue.</p></noscript>
 <div class="topbg"><div class="wrap">
-<nav><span class="logo">Saathi</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My bookings</a><a href="#/verify" id="verlink" hidden>Verify ID</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
+<nav><span class="logo">Saathiyaa</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My meets</a><a href="#/verify" id="verlink" hidden>Verify ID</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
 
 <header class="hero home"><h1>Don't do garba alone.</h1><p>Verified companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
 <div class="cta"><a class="btn white" href="#browse">Find a companion</a><a class="btn ghost" href="#/list">List yourself</a></div></header>
@@ -34,7 +34,7 @@
 <select id="city" aria-label="City"><option>Pune</option><option>Mumbai</option><option>Ahmedabad</option><option>Vadodara</option><option>Surat</option></select>
 <select id="rad" aria-label="Distance" hidden><option value="5">Within 5 km</option><option value="10">Within 10 km</option><option value="25" selected>Within 25 km</option><option value="50">Within 50 km</option></select>
 <select id="gender" aria-label="Show" hidden><option value="">Show everyone</option><option value="F">Women</option><option value="M">Men</option></select>
-<select id="sort" aria-label="Sort"><option value="n" disabled>Nearest</option><option value="r" selected>Top rated</option><option value="p">Lowest price</option></select>
+<select id="sort" aria-label="Sort"><option value="n" disabled>Nearest</option><option value="r" selected>Top rated</option></select>
 </div>
 <p class="meta" id="locmsg"></p>
 <div class="chips" id="chips" role="group" aria-label="Activity"></div>
@@ -45,27 +45,27 @@
 <button class="btn alt" id="more" type="button" hidden>Show more</button>
 </section>
 
-<section id="login" class="lgv"><div class="lgbox"><h2>Log in to Saathi</h2>
+<section id="login" class="lgv"><div class="lgbox"><h2>Log in to Saathiyaa</h2>
 <p class="meta" id="lgmsg" style="margin:10px 0 18px">Log in to pick up where you left off.</p>
 <button class="btn" id="gbtn" type="button" style="width:100%">Continue with Google</button>
 <p class="note" style="margin-top:18px">You must be 18 or older. Signing in does not prove your age, so every listing needs ID verification.</p>
 <p class="meta" style="margin-top:14px">By continuing you agree to the <a href="terms.html" style="color:var(--accent2)">Terms</a> and <a href="privacy.html" style="color:var(--accent2)">Privacy Policy</a>.</p></div></section>
-<section id="bookings" class="bkv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><h2>My bookings</h2><div id="bklist"></div></section>
-<section id="why" class="home"><h2>Why Saathi</h2>
-<p class="meta" style="max-width:52ch;margin-top:12px">Saathi means companion. We built it for the nights you want company, not a crowd.</p>
+<section id="bookings" class="bkv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><h2>My meets</h2><div id="bklist"></div></section>
+<section id="why" class="home"><h2>Why Saathiyaa</h2>
+<p class="meta" style="max-width:52ch;margin-top:12px">Saathiyaa comes from saathi, the Hindi and Gujarati word for companion. We built it for the nights you want company, not a crowd.</p>
 <div class="why">
-<div><h3>Made for garba season</h3><p>Dandiya partners, wedding plus-ones and dinner company, booked by activity instead of guesswork.</p></div>
+<div><h3>Made for garba season</h3><p>Dandiya partners, wedding plus-ones and dinner company, found by activity instead of guesswork.</p></div>
 <div><h3>Verified, every time</h3><p>Every companion passes an ID and selfie check, then a human review, before they appear as verified.</p></div>
-<div><h3>Both sides choose</h3><p>Companions accept or decline each request and set their own day or hourly rate. No one is ever assigned.</p></div>
-<div><h3>Safe by design</h3><p>Every request names a public place, you can share booking details with a friend in one tap, and you can report or block anyone.</p></div>
-<div><h3>Clear, fair pricing</h3><p>Book by the day or by the hour. The platform fee is shown before you send a request.</p></div>
+<div><h3>Both sides choose</h3><p>Companions accept or decline every meet request and every chat request. No one is ever assigned.</p></div>
+<div><h3>Safe by design</h3><p>Every meet request names a public place, chat opens only after the other person accepts, you can share meet details with a friend in one tap, and you can report or block anyone.</p></div>
+<div><h3>Free to use</h3><p>Chat and meet requests cost nothing while we launch. No money changes hands through Saathiyaa.</p></div>
 <div><h3>Near you</h3><p>Share your location and see who is available around you, sorted by distance.</p></div>
 </div></section>
 <section id="join" class="listv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div id="lstatus"></div>
 <div class="two">
 <div>
 <h2 id="ltitle">List yourself as a companion</h2>
-<p style="color:var(--mute)">Set your own rate, activities and city. You approve every booking, and you can decline or block anyone, any time.</p>
+<p style="color:var(--mute)">Pick your activities and city. You approve every meet request and chat request, and you can decline or block anyone, any time.</p>
 <div class="note" style="margin-top:14px">Listings go live after ID and selfie verification. Your listing is visible to others only after that review.</div>
 </div>
 <div><form id="form">
@@ -76,9 +76,9 @@
 <label>Activities I offer</label><div class="checks" id="acts"></div>
 <div class="checks" style="margin-top:14px"><label><input type="checkbox" id="goout" checked> Available to go out</label></div>
 <div class="checks" id="showwrap" style="margin-top:8px" hidden><label><input type="checkbox" id="showon" checked> Show me as "Online now" while I am on the site</label></div>
-<label for="rd">Rate per day (₹)</label><input id="rd" type="number" min="500" max="50000" placeholder="e.g. 2500">
+<div id="ratebox" hidden><label for="rd">Rate per day (₹)</label><input id="rd" type="number" min="500" max="50000" placeholder="e.g. 2500">
 <label for="r">Rate per hour (₹, optional)</label><input id="r" type="number" min="100" max="10000" placeholder="e.g. 400">
-<p class="meta">Set a day rate, an hourly rate, or both. Customers choose from what you offer.</p>
+<p class="meta">Set a day rate, an hourly rate, or both.</p></div>
 <button class="btn alt" type="button" id="myloc" style="margin-top:12px">Use my location for my listing</button> <span class="meta" id="mylocmsg"></span>
 <label for="b">About you</label><textarea id="b" rows="3" maxlength="200" placeholder="Garba since age 6. Happy to teach basic steps."></textarea>
 <p class="meta">Companionship only. Any request beyond time and company is a violation and gets the account banned.</p>
@@ -89,7 +89,7 @@
 </div>
 </section>
 
-<section id="dashboard" class="dbv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Your bookings</h2><button class="btn alt" id="dref" type="button">Refresh</button></div><p class="meta" style="max-width:56ch;margin-top:10px">Accept or decline each request. If two requests land on the same day, accept the one you want and reject the other.</p><div id="dash"></div></section>
+<section id="dashboard" class="dbv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><h2>Meet requests</h2><button class="btn alt" id="dref" type="button">Refresh</button></div><p class="meta" style="max-width:56ch;margin-top:10px">Accept or decline each request. If two requests land on the same day, accept the one you want and reject the other.</p><div id="dash"></div></section>
 
 <section id="verify" class="vw"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
 <h2>Verify your identity</h2>
@@ -98,9 +98,10 @@
 
 <section id="chats" class="chv"><div class="cpg" id="cpg">
 <aside class="cside"><div class="chead">Chats</div><div class="clistp" id="clistp" role="list"></div></aside>
-<div class="cmain"><div class="cempty" id="cempty">Select a chat to start messaging.<br><span class="meta">A chat opens once a booking is accepted. Messages are deleted after 24 hours.</span></div>
+<div class="cmain"><div class="cempty" id="cempty">Select a chat to start messaging.<br><span class="meta">Chat is free. It opens when someone accepts your hello or a meet request. Messages are deleted after 24 hours.</span></div>
 <div class="cpane" id="cpane" hidden>
-<div class="cph"><button class="btn alt cback" id="cback" type="button" aria-label="Back to chats">&larr;</button><span class="avw2"><span class="nic av" id="cpav"></span><i class="pdot" id="cpdot" hidden></i></span><div class="tt"><b id="cpname"></b><small id="cpstat"></small></div><button class="btn alt" id="pcreport" type="button">Report or block</button><a class="btn alt" href="tel:112">112</a></div>
+<div class="cph"><button class="btn alt cback" id="cback" type="button" aria-label="Back to chats">&larr;</button><span class="avw2"><span class="nic av" id="cpav"></span><i class="pdot" id="cpdot" hidden></i></span><div class="tt"><b id="cpname"></b><small id="cpstat"></small></div><button class="btn alt" id="pcreport" type="button" title="Report or block">Report</button><a class="btn alt" href="tel:112">112</a></div>
+<div class="creq" id="creq" hidden></div>
 <div class="cbox" id="pcbox" aria-live="polite"></div>
 <p class="meta" id="pcerr" role="alert" style="color:#d33;padding:0 16px"></p>
 <form class="vf" id="pcf"><button class="btn alt ibtn" id="pcam" type="button" aria-label="Take a photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="btn alt ibtn" id="ppic" type="button" aria-label="Send a photo from your phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button><input id="pcin" maxlength="500" placeholder="Type a message" autocomplete="off" aria-label="Message"><button class="btn" type="submit">Send</button><input type="file" id="pfcam" accept="image/*" capture="environment" hidden><input type="file" id="pffile" accept="image/*" hidden></form>
@@ -112,25 +113,30 @@
 <section id="safety">
 <h2 style="margin-bottom:18px">Built so both sides feel safe</h2>
 <div class="safe">
-<div><b>Public venues only</b>Every request must name a public place such as a garba ground, café, restaurant or event hall, and the customer confirms it when booking.</div>
+<div><b>Public venues only</b>Every request must name a public place such as a garba ground, café, restaurant or event hall, and the other person confirms it in the request.</div>
 <div><b>Verified profiles</b>18+ with ID and selfie check, then a human review, before a listing goes live.</div>
-<div><b>Report and block</b>Report anyone from a booking and block them in the same step. Blocked people can no longer see or contact you.</div>
-<div><b>Share and emergency</b>Share booking details with a trusted friend, and call 112 straight from any accepted booking.</div>
+<div><b>Report and block</b>Report anyone from a chat or a meet request and block them in the same step. Blocked people can no longer see or contact you.</div>
+<div><b>Share and emergency</b>Share meet details with a trusted friend, and call 112 straight from any accepted meet.</div>
 </div>
 </section>
 </main>
-<footer>Saathi is a companionship service for time and company only. Payments are not live yet.
+<footer>Saathiyaa is a companionship service for time and company only. No payments happen on the site.
 <div class="lnk"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="mailto:support@example.com">Contact support</a></div><!-- TODO: replace support@example.com with your real support address -->
 </footer>
 </div>
 
 <dialog id="dlg"><form method="dialog" id="bk"></form></dialog>
-<dialog id="cdlg"><h2 id="ctitle" style="font-size:22px">Chat</h2><p class="meta" style="margin-top:6px">Messages are deleted 24 hours after they are sent. Keep the chat about your booking.</p><div class="cbox" id="cbox" aria-live="polite"></div><p class="meta" id="cerr" role="alert" style="color:#d33"></p><form class="vf" id="cf"><input id="cin" maxlength="500" placeholder="Type a message" autocomplete="off" aria-label="Message" required><button class="btn" type="submit">Send</button></form><div class="srow"><button class="btn alt" id="cclose" type="button">Close</button><button class="btn alt" id="creport" type="button">Report or block</button><a class="btn alt" href="tel:112">Emergency: call 112</a></div></dialog>
+<dialog id="cdlg"><h2 id="ctitle" style="font-size:22px">Chat</h2><p class="meta" style="margin-top:6px">Messages are deleted 24 hours after they are sent. Keep the chat respectful and about meeting up.</p><div class="cbox" id="cbox" aria-live="polite"></div><p class="meta" id="cerr" role="alert" style="color:#d33"></p><form class="vf" id="cf"><input id="cin" maxlength="500" placeholder="Type a message" autocomplete="off" aria-label="Message" required><button class="btn" type="submit">Send</button></form><div class="srow"><button class="btn alt" id="cclose" type="button">Close</button><button class="btn alt" id="creport" type="button">Report or block</button><a class="btn alt" href="tel:112">Emergency: call 112</a></div></dialog>
+<dialog id="mdlg"><form method="dialog" id="mform"><h2 id="mtitle" style="font-size:22px">Say hello</h2>
+<p class="meta" style="margin-top:6px">Send one short intro message. Chat opens once they accept, and you can't send more until they do. Don't share phone numbers or addresses yet. They can decline or block, and you can report anyone.</p>
+<label for="mtxt">Your message</label><textarea id="mtxt" rows="4" maxlength="300" placeholder="Hi! I'm looking for a garba partner this Saturday."></textarea>
+<p class="meta" id="merr" role="alert" style="color:#d33;margin-top:8px"></p>
+<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send request</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div></form></dialog>
 <dialog id="pdlg"><div id="pbody"></div><button class="btn alt" id="pclose" type="button" style="margin-top:14px">Close</button></dialog>
 <dialog id="rdlg" aria-labelledby="rtitle"><form method="dialog" id="rform"><h2 id="rtitle" style="font-size:22px">Report or block</h2>
 <p class="meta" style="margin-top:6px">Tell us what happened. Our team reviews every report. If you are in danger, call 112 first.</p>
 <label for="rwhy">What happened?</label><textarea id="rwhy" rows="4" maxlength="500" placeholder="e.g. asked to meet at a private address"></textarea>
-<label class="chk"><input type="checkbox" id="rblock" checked> Also block this person and cancel the booking</label>
+<label class="chk"><input type="checkbox" id="rblock" checked> Also block this person and cancel any meet request</label>
 <p class="meta" id="rerr" role="alert" style="color:#d33;margin-top:8px"></p>
 <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send report</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>

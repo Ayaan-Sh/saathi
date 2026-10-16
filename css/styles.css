@@ -192,7 +192,6 @@ body[data-view="chats"] #safety{display:none}
  .cpg[data-open="1"] .cside{display:none}
  .cpg:not([data-open="1"]) .cmain{display:none}
  .cback{display:inline-block}
- #pcreport{display:none}
 }
 
 /* chat photos */
@@ -218,3 +217,10 @@ body[data-view="admin"] #safety{display:none}
 .arow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .arow input{flex:1;min-width:200px}
 @media(max-width:560px){.aimgs{grid-template-columns:1fr 1fr}}
+
+/* chat requests */
+.pbtns{display:flex;gap:8px}.price .btn{padding:11px 18px}
+.rq{color:var(--accent2)!important;font-weight:700}
+.creq{padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(224,21,95,.07)}
+.creq p{margin:0 0 8px;font-size:14px}
+@media(max-width:760px){.cph{gap:8px;padding:10px 12px}.cph .btn{padding:6px 10px}}
