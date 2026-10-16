@@ -709,10 +709,9 @@ $("mform").onsubmit=async function(e){
  CR=[];location.hash="#/chats/"+cid;
 };
 async function gotoBookingChat(bid){
- var r=await sb.from("bookings").select("customer_id,companion_id").eq("id",bid).single();
- if(r.error){toast("Couldn't open the chat.");return}
- var c=await sb.from("conversations").select("id").eq("customer_id",r.data.customer_id).eq("companion_id",r.data.companion_id).maybeSingle();
- if(c.data){CR=[];location.hash="#/chats/"+c.data.id}else toast("The chat isn't ready yet. Try again in a moment.");
+ var r=await sb.rpc("open_booking_chat",{p_booking:bid});
+ if(r.error){toast(r.error.message||"Couldn't open the chat.");return}
+ CR=[];location.hash="#/chats/"+r.data;
 }
 function shrinkPhoto(file){return new Promise(function(res,rej){
  var url=URL.createObjectURL(file),im=new Image();
