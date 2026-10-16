@@ -97,10 +97,15 @@
 <div class="chat" id="chat" aria-live="polite"></div><div class="reply" id="reply"></div></section>
 
 <section id="chats" class="chv"><div class="cpg" id="cpg">
-<aside class="cside"><div class="chead">Chats</div><div class="clistp" id="clistp" role="list"></div></aside>
+<aside class="cside"><div class="chead">Chats</div><div class="clistp" id="clistp" role="list"></div><button class="bkb" id="bkbtn" type="button">Blocked people</button></aside>
 <div class="cmain"><div class="cempty" id="cempty">Select a chat to start messaging.<br><span class="meta">Chat is free. It opens when someone accepts your hello or a meet request. Messages are deleted after 24 hours.</span></div>
 <div class="cpane" id="cpane" hidden>
-<div class="cph"><button class="btn alt cback" id="cback" type="button" aria-label="Back to chats">&larr;</button><span class="avw2"><span class="nic av" id="cpav"></span><i class="pdot" id="cpdot" hidden></i></span><div class="tt"><b id="cpname"></b><small id="cpstat"></small></div><button class="btn alt" id="pcreport" type="button" title="Report or block">Report</button><a class="btn alt" href="tel:112">112</a></div>
+<div class="cph"><button class="btn alt cback" id="cback" type="button" aria-label="Back to chats">&larr;</button><span class="avw2"><span class="nic av" id="cpav"></span><i class="pdot" id="cpdot" hidden></i></span><div class="tt"><b id="cpname"></b><small id="cpstat"></small></div><a class="btn alt" href="tel:112">112</a><button class="btn alt ibtn" id="pcmore" type="button" aria-label="Chat options" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
+<div class="pmenu" id="pmenu" role="menu" hidden>
+<button type="button" role="menuitem" id="pcpin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3-1-7z"/></svg><span id="pcpinl">Pin chat</span></button>
+<button type="button" role="menuitem" id="pcmute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><path d="M1 1l22 22"/></svg><span id="pcmutel">Mute notifications</span></button>
+<button type="button" role="menuitem" id="pcreport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4M4 4h13l-2 4 2 4H4"/></svg><span>Report or block</span></button>
+</div></div>
 <div class="creq" id="creq" hidden></div>
 <div class="cbox" id="pcbox" aria-live="polite"></div>
 <p class="meta" id="pcerr" role="alert" style="color:#d33;padding:0 16px"></p>
@@ -115,7 +120,7 @@
 <div class="safe">
 <div><b>Public venues only</b>Every request must name a public place such as a garba ground, café, restaurant or event hall, and the other person confirms it in the request.</div>
 <div><b>Verified profiles</b>18+ with ID and selfie check, then a human review, before a listing goes live.</div>
-<div><b>Report and block</b>Report anyone from a chat or a meet request and block them in the same step. Blocked people can no longer see or contact you.</div>
+<div><b>Report and block</b>Report anyone from a chat or a meet request and block them in the same step. Blocked people can no longer see or contact you, and you can unblock anyone from the Chats page.</div>
 <div><b>Share and emergency</b>Share meet details with a trusted friend, and call 112 straight from any accepted meet.</div>
 </div>
 </section>
@@ -132,6 +137,10 @@
 <label for="mtxt">Your message</label><textarea id="mtxt" rows="4" maxlength="300" placeholder="Hi! I'm looking for a garba partner this Saturday."></textarea>
 <p class="meta" id="merr" role="alert" style="color:#d33;margin-top:8px"></p>
 <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send request</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div></form></dialog>
+<dialog id="bdlg" aria-labelledby="bttl"><h2 id="bttl" style="font-size:22px">Blocked people</h2>
+<p class="meta" style="margin-top:6px">People you blocked can't see or contact you. Unblock someone to let them message you again.</p>
+<div id="blist" style="margin-top:12px"></div>
+<button class="btn alt" id="bclose" type="button" style="margin-top:14px">Close</button></dialog>
 <dialog id="pdlg"><div id="pbody"></div><button class="btn alt" id="pclose" type="button" style="margin-top:14px">Close</button></dialog>
 <dialog id="rdlg" aria-labelledby="rtitle"><form method="dialog" id="rform"><h2 id="rtitle" style="font-size:22px">Report or block</h2>
 <p class="meta" style="margin-top:6px">Tell us what happened. Our team reviews every report. If you are in danger, call 112 first.</p>
