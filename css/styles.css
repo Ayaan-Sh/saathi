@@ -257,9 +257,7 @@ body[data-view="admin"] #safety{display:none}
 .brow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .btn{padding:8px 16px;font-size:13px}
 /* settings, onboarding, delete */
-body:not([data-view="settings"]) .stv{display:none}
-body[data-view="settings"] #safety{display:none}
-.stbox{max-width:520px;margin-top:18px}
+.stbox{max-width:520px;margin-top:48px;padding-top:28px;border-top:1px solid var(--line)}
 .stbox h3{margin:32px 0 6px;font-size:19px}
 .stbox h3:first-child{margin-top:0}
 .stbox label{display:block;margin:14px 0 6px;font-weight:600}

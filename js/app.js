@@ -138,7 +138,7 @@ function renderStatus(){
  var m={pending:"You're live. Verify your ID (optional) to get a pink tick next to ID verified on your card.",review:"Your ID is under review. You stay live while you wait.",verified:"Your ID is verified. Your card shows the pink tick.",rejected:"Your ID verification was rejected, but you are still live. Update your details and verify again if you like.",suspended:"This listing is suspended. Contact support."},
   L={pending:"Live, ID not verified",review:"Live, ID under review",verified:"Live, ID verified",rejected:"Live, ID not verified",suspended:"Suspended"},
   ttl=mine.status!="suspended"&&mine.paused?"Paused":(L[mine.status]||mine.status),
-  pre=mine.status!="suspended"&&mine.paused?'Nobody can see your profile right now. <a href="#/settings" style="color:var(--accent2);font-weight:700">Unpause in Settings</a><br>':'';
+  pre=mine.status!="suspended"&&mine.paused?'Nobody can see your profile right now. Unpause it under Your settings below.<br>':'';
  el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(ttl)+'</b><br>'+pre+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'<span id="rnote"></span></div>';
  if(mine.status=="rejected")rejectNote();
 }
@@ -301,7 +301,7 @@ async function finish(){
 }
 
 /* ---------- nav, photos, dashboard ---------- */
-function updateNav(){$("setlink").hidden=!user;$("adminlink").hidden=!isRev;var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=has?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
+function updateNav(){$("adminlink").hidden=!isRev;var has=!!(user&&mine);$("verlink").hidden=!(has&&mine.status!="verified");$("dashlink").hidden=!has;$("listlink").textContent=user?"My profile":"Become a companion";if(!has)$("dashlink").textContent="Dashboard"}
 async function refreshBadge(){if(!sb||!mine)return;var r=await sb.from("bookings").select("id",{count:"exact",head:true}).eq("companion_id",mine.id).eq("status","requested");if(r.error)return;var n=r.count||0;$("dashlink").innerHTML="Dashboard"+(n?' <span class="dn">'+n+'</span>':'')}
 async function loadExtras(){
  if(!sb||!DATA.length)return;var my=token;
@@ -919,7 +919,7 @@ $("dgo").onclick=async function(){
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
- var h=location.hash,v=h=="#/list"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":h=="#/settings"?"settings":"home";
+ var h=location.hash,v=h=="#/list"||h=="#/settings"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":"home";
  if((v=="list"||v=="verify"||v=="bookings"||v=="dashboard"||v=="chats"||v=="admin"||v=="settings")&&!user){nextHash=h;$("lgmsg").textContent="Log in to continue where you left off.";location.hash="#/login";return}
  var pv=document.body.dataset.view;document.body.dataset.view=v;
  if(pv!==v)window.scrollTo(0,0);
@@ -934,8 +934,7 @@ function route(){
  if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();
  if(v=="dashboard")loadDash();
- if(v=="settings")renderSettings();
- if(v=="list"){renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
+ if(v=="list"){renderSettings();renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
 }
 window.addEventListener("hashchange",route);
 ui();renderChips();
