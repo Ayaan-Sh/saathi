@@ -7,7 +7,7 @@ var configured=SUPABASE_URL.indexOf("YOUR-PROJECT")<0&&SUPABASE_ANON_KEY.indexOf
 var sb=configured?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{flowType:"pkce"}}):null;
 var isRev=false,user=null,mine=null,DATA=[],active=-1,loc=null,myLoc=null,photo=null,prefs={},nextHash="",token=0,presT=null,saveT=null,vs={},HIDDEN=[],NAMES={},PAGE=24,shown=24,stateLoaded=false,authId,rs={};
 var PAID=false; /* prices and payments stay hidden until this is true */
-var MP=null; /* my preferences: {gender, interested_in} */
+var MP=null,MPERR=false; /* my preferences: {gender, interested_in} */
 var GARBA_ENDS=new Date("2026-10-21T00:00:00+05:30"); /* after this moment the garba copy switches to the general copy */
 var TICK='<svg class="tick" viewBox="0 0 24 24" role="img" aria-label="Verified"><circle cx="12" cy="12" r="11" fill="#ff4fa3"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function seasonCopy(){
@@ -39,7 +39,7 @@ async function nameFor(ids){var need=ids.filter(function(i,ix,a){return i&&(!NAM
 async function loadHidden(){HIDDEN=[];if(!user||!sb)return;var r=await sb.rpc("hidden_companions");HIDDEN=r.error?[]:(r.data||[])}
 
 /* ---------- data ---------- */
-function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,v:!!r.id_verified,out:r.available_out!==false,d:r.distance_km,extra:[]}}
+function norm(r){return{id:r.id,n:r.name,a:r.age,g:r.gender,c:r.city,acts:(r.activities||[]).map(function(k){return KEYS.indexOf(k)}).filter(function(i){return i>-1}),hr:r.rate_hour||0,day:r.rate_day||0,rt:Number(r.rating)||0,b:r.bio||"",photo:r.photo_path?sb.storage.from("profile-photos").getPublicUrl(r.photo_path).data.publicUrl:"",online:!!r.online,v:!!(r.id_verified||r.status=="verified"),out:r.available_out!==false,d:r.distance_km,extra:[]}}
 async function load(){
  if(!sb){renderOnline();renderGrid();return}
  if(loc&&!user){loc=null;ui()}
@@ -138,7 +138,7 @@ function renderStatus(){
  var m={pending:"You're live. Verify your ID (optional) to get a pink tick next to ID verified on your card.",review:"Your ID is under review. You stay live while you wait.",verified:"Your ID is verified. Your card shows the pink tick.",rejected:"Your ID verification was rejected, but you are still live. Update your details and verify again if you like.",suspended:"This listing is suspended. Contact support."},
   L={pending:"Live, ID not verified",review:"Live, ID under review",verified:"Live, ID verified",rejected:"Live, ID not verified",suspended:"Suspended"},
   ttl=mine.status!="suspended"&&mine.paused?"Paused":(L[mine.status]||mine.status),
-  pre=mine.status!="suspended"&&mine.paused?'Nobody can see your profile right now. Unpause it under Your settings below.<br>':'';
+  pre=mine.status!="suspended"&&mine.paused?'Nobody can see your profile right now. Unpause it in the Settings tab.<br>':'';
  el.innerHTML='<div class="note" style="margin:0 0 24px"><b>Your listing: '+esc(ttl)+'</b><br>'+pre+m[mine.status]+(mine.status=="pending"||mine.status=="rejected"?' <a href="#/verify" style="color:var(--accent2);font-weight:700">Verify ID</a>':'')+'<span id="rnote"></span></div>';
  if(mine.status=="rejected")rejectNote();
 }
@@ -858,14 +858,15 @@ $("aq").onclick=async function(e){
 
 /* ---------- preferences, pause, delete ---------- */
 async function loadMP(){
- MP=null;if(!sb||!user)return;
+ MP=null;MPERR=false;if(!sb||!user)return;
  var r=await sb.from("member_prefs").select("gender,interested_in").eq("user_id",user.id).maybeSingle();
- if(r.error){console.error("Saathiyaa: couldn't load preferences",r.error);return}
+ if(r.error){MPERR=true;console.error("Saathiyaa: couldn't load preferences",r.error);return}
  MP=r.data||null}
 function needPrefs(){
- if(!sb||!user||MP)return;
+ if(!sb||!user||MP||MPERR)return;
  var d=$("odlg");if(mine&&mine.gender)$("og").value=mine.gender;
  if(!d.open)d.showModal()}
+$("ologout").onclick=function(){$("odlg").close();if(sb)sb.auth.signOut()};
 $("odlg").addEventListener("cancel",function(e){e.preventDefault()});
 $("oform").onsubmit=async function(e){
  e.preventDefault();var g=$("og").value,i=$("oi").value;
@@ -916,6 +917,9 @@ $("dgo").onclick=async function(){
  }catch(err){$("derr").textContent="Couldn't delete your account. "+(err.message||"")}
  b.disabled=false};
 
+function setTab(t){$("join").dataset.tab=t;[].forEach.call($("ptabs").children,function(b){b.setAttribute("aria-pressed",String(b.dataset.t==t))})}
+$("ptabs").onclick=function(e){var b=e.target.closest("button");if(b)setTab(b.dataset.t)};
+
 /* ---------- routing + init ---------- */
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
@@ -934,7 +938,7 @@ function route(){
  if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();
  if(v=="dashboard")loadDash();
- if(v=="list"){renderSettings();renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
+ if(v=="list"){setTab(h=="#/settings"?"s":"p");renderSettings();renderStatus();if(prefs.draft)fillForm(prefs.draft);else formFromListing();listMode()}
 }
 window.addEventListener("hashchange",route);
 ui();renderChips();

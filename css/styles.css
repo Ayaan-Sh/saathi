@@ -257,7 +257,11 @@ body[data-view="admin"] #safety{display:none}
 .brow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .btn{padding:8px 16px;font-size:13px}
 /* settings, onboarding, delete */
-.stbox{max-width:520px;margin-top:48px;padding-top:28px;border-top:1px solid var(--line)}
+.ptabs{margin:8px 0 24px}
+.ptabs button{padding:10px 22px;font-size:15px}
+#join[data-tab="s"] .two,#join[data-tab="s"] #lstatus{display:none}
+#join:not([data-tab="s"]) #mysettings{display:none}
+.stbox{max-width:520px;margin-top:8px}
 .stbox h3{margin:32px 0 6px;font-size:19px}
 .stbox h3:first-child{margin-top:0}
 .stbox label{display:block;margin:14px 0 6px;font-weight:600}

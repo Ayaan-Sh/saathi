@@ -61,7 +61,9 @@
 <div><h3>Free to use</h3><p>Chat and meet requests cost nothing while we launch. No money changes hands through Saathiyaa.</p></div>
 <div><h3>Near you</h3><p>Share your location and see who is available around you, sorted by distance.</p></div>
 </div></section>
-<section id="join" class="listv"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p><div id="lstatus"></div>
+<section id="join" class="listv" data-tab="p"><p><a href="#/" style="color:var(--accent2);font-weight:700">Back to browse</a></p>
+<div class="seg ptabs" id="ptabs" role="group" aria-label="Profile sections"><button type="button" data-t="p" aria-pressed="true">Profile</button><button type="button" data-t="s" aria-pressed="false">Settings</button></div>
+<div id="lstatus"></div>
 <div class="two">
 <div>
 <h2 id="ltitle">List yourself as a companion</h2>
@@ -88,7 +90,6 @@
 </div>
 </div>
 <div class="stbox" id="mysettings">
-<h2 style="font-size:26px;margin-bottom:14px">Your settings</h2>
 <h3>Who you want to meet</h3>
 <p class="meta">Only people who want to meet someone like you can see your profile, and you only see people who fit what you choose here. You can change this any time.</p>
 <label for="sg">I am</label><select id="sg"><option value="" disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
@@ -171,7 +172,7 @@
 <label for="og">I am</label><select id="og"><option value="" selected disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
 <label for="oi">I want to meet</label><select id="oi"><option value="" selected disabled>Choose</option><option value="F">Women</option><option value="M">Men</option><option value="B">Both</option></select>
 <p class="meta" id="oerr" role="alert" style="color:#d33;margin-top:8px"></p>
-<div style="margin-top:14px"><button class="btn" type="submit">Continue</button></div></form></dialog>
+<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit">Continue</button><button class="btn alt" id="ologout" type="button">Log out</button></div></form></dialog>
 <dialog id="ddlg" aria-labelledby="dttl"><h2 id="dttl" style="font-size:22px">Delete your account?</h2>
 <p class="meta" style="margin-top:6px">Everything is removed for good: your profile, photos, chats and meet requests. Type DELETE to confirm.</p>
 <input id="dtxt" autocomplete="off" aria-label="Type DELETE to confirm" style="margin-top:12px">
