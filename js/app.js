@@ -61,7 +61,7 @@ function renderOnline(){
 }
 function renderGrid(){
  var all=DATA.filter(function(p){return p.out}),l=all.slice(0,shown),el=$("grid");$("gc").textContent=all.length+" available";$("more").hidden=all.length<=shown;$("more").textContent="Show more ("+Math.max(0,all.length-shown)+" more)";
- if(!l.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(configured?(!user?'Log in and tell us who you want to meet to see people. <a href="#/login" style="color:var(--accent2);font-weight:700">Log in</a>':loc?'No one nearby yet. Widen the distance, or list yourself.':'No companions in this city yet. Try another city or activity, or list yourself.'):'Add your Supabase URL and anon key to see companions.')+'</div>';return}
+ if(!l.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(configured?(loc?'No one nearby yet. Widen the distance, or list yourself.':'No companions in this city yet. Try another city or activity, or list yourself.'):'Add your Supabase URL and anon key to see companions.')+'</div>';return}
  el.innerHTML=l.map(function(p){
   var price=!PAID?'':(p.day?'<b>'+inr(p.day)+'</b> /day':'')+(p.day&&p.hr?'<br>':'')+(p.hr?(p.day?'<span class="meta">':'<b>')+inr(p.hr)+(p.day?'</span>':'</b>')+' /hr':'');
   return '<article class="card">'+media(p)+'<div class="bd"><div><h3>'+esc(p.n)+', '+esc(p.a)+'</h3><div class="meta">'+where(p)+(p.rt?' · ★ '+p.rt.toFixed(1):' · New')+'</div></div>'
@@ -111,7 +111,7 @@ function applyPrefs(){["city","gender","rad","sort"].forEach(function(k){if(pref
 async function loadMine(){var r=await sb.from("companions").select("*").eq("user_id",user.id).maybeSingle();if(r.error)throw r.error;mine=r.data||null;renderStatus();updateNav();refreshBadge()}
 function ping(){if(user&&document.visibilityState=="visible"){if(isRev)adminBadge();if(mine&&mine.status!="verified")loadMine().catch(function(){});if(prefs.showOnline!==false&&!(mine&&mine.paused))sb.rpc("touch_presence");refreshBadge()}}
 async function setUser(u){
- user=u;isRev=false;stateLoaded=false;HIDDEN=[];MP=null;renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
+ user=u;isRev=false;$("aq").innerHTML="";clearInterval(AQ.t);stateLoaded=false;HIDDEN=[];MP=null;renderAcct();clearInterval(presT);mine=null;prefs={};updateNav();notifStop();
  if(u){try{
   try{var nx=sessionStorage.getItem("saathi_next");if(nx){nextHash=nx;sessionStorage.removeItem("saathi_next")}}catch(e){}
   await loadMine();await loadMP();await checkReviewer();
@@ -319,11 +319,11 @@ function showPhotos(id){var p=DATA.filter(function(x){return String(x.id)==id})[
 $("pclose").onclick=function(){$("pdlg").close()};
 
 /* edit profile + extra photos */
-var gal=[];
+var gal=[],MAX_EXTRA=5; /* gallery photos per member (on top of the main photo) */
 function listMode(){
  var ed=!!mine;$("ltitle").textContent=ed?"Edit your profile":"List yourself as a companion";$("lsave").textContent=ed?"Save changes":"Create my listing";$("galbox").hidden=!ed;var lk=ed&&mine.status=="verified";["pf","n"].forEach(function(k){$(k).disabled=lk});$("g").disabled=lk||!!MP;if(MP)$("g").value=MP.gender;$("lockmsg").hidden=!lk;$("showwrap").hidden=!ed;$("showon").checked=prefs.showOnline!==false;
  if(ed&&mine.photo_path&&!photo){$("pv").src=pubUrl(mine.photo_path);$("pv").hidden=false}
- if(ed)renderGal();
+ if(ed){renderGal();paintMain()}
 }
 async function renderGal(){
  var el=$("gal");if(!mine)return;
@@ -331,12 +331,13 @@ async function renderGal(){
  if(r.error){el.innerHTML='<p class="meta">Couldn\'t load your photos.</p>';return}
  gal=r.data;
  el.innerHTML=gal.length?gal.map(function(g){return '<div class="gt"><img src="'+esc(pubUrl(g.path))+'" alt="Your extra photo"><button type="button" data-g="'+esc(g.id)+'" aria-label="Remove photo">\u00d7</button></div>'}).join(""):'<p class="meta" style="grid-column:1/-1">No extra photos yet.</p>';
- $("gadd").disabled=gal.length>=6;
+ $("gadd").disabled=gal.length>=MAX_EXTRA;$("gadd").textContent=gal.length>=MAX_EXTRA?"Photo limit reached ("+gal.length+"/"+MAX_EXTRA+")":"Add photos ("+gal.length+"/"+MAX_EXTRA+")";
+ paintMain();
 }
 $("gadd").onclick=function(){$("gf").click()};
 $("gf").onchange=async function(){
  var files=[].slice.call(this.files);this.value="";if(!files.length||!mine)return;
- var room=6-gal.length;if(room<=0){toast("You already have 6 extra photos. Remove one to add another.");return}
+ var room=MAX_EXTRA-gal.length;if(room<=0){toast("You already have "+MAX_EXTRA+" photos. Remove one to add another.");return}
  if(files.length>room){toast("Only "+room+" more photo(s) fit. Adding the first "+room+".");files=files.slice(0,room)}
  $("gadd").disabled=true;var fail=0;
  for(var i=0;i<files.length;i++){
@@ -350,6 +351,22 @@ $("gf").onchange=async function(){
  if(fail)toast(fail+" photo(s) couldn't be uploaded. Use JPG or PNG files.");
  renderGal();
 };
+/* main photo: removable too, as long as another photo can take its place */
+function paintMain(){
+ var b=$("pvdel");
+ if(!b){b=document.createElement("button");b.type="button";b.id="pvdel";b.className="btn alt";b.textContent="Remove this photo";$("pv").insertAdjacentElement("afterend",b);b.onclick=delMain}
+ b.hidden=!(mine&&mine.photo_path&&!photo&&mine.status!="verified"&&gal.length>0)
+}
+async function delMain(){
+ if(!mine||!gal.length||!confirm("Remove your main photo? Your first extra photo becomes your main photo."))return;
+ var b=this;b.disabled=true;var nx=gal[0],old=mine.photo_path;
+ var u=await sb.from("companions").update({photo_path:nx.path}).eq("id",mine.id).select().single();
+ if(u.error){toast("Couldn't remove the photo. "+u.error.message);b.disabled=false;return}
+ mine=u.data;
+ await sb.from("companion_photos").delete().eq("id",nx.id);
+ sb.storage.from("profile-photos").remove([old]);
+ $("pv").src=pubUrl(mine.photo_path);b.disabled=false;renderGal();load()
+}
 $("gal").onclick=async function(e){
  var b=e.target.closest("button[data-g]");if(!b||!confirm("Remove this photo?"))return;b.disabled=true;
  var g=gal.filter(function(x){return String(x.id)==b.dataset.g})[0];
@@ -430,10 +447,32 @@ async function signImgs(box){
  r.data.forEach(function(x){if(x.signedUrl)SIGN[x.path]={url:x.signedUrl,exp:Date.now()+3300000}});
  im.forEach(function(i){var s=SIGN[i.dataset.p];if(s&&box.contains(i)){i.onload=function(){if(cs.stick)box.scrollTop=box.scrollHeight};i.src=s.url}});
 }
+/* delete / unsend a chat message */
+function hidKey(){return "saathi_hidmsg_"+(user?user.id:"")}
+function hidGet(){try{return JSON.parse(localStorage.getItem(hidKey()))||[]}catch(e){return[]}}
+function hidAdd(id){var a=hidGet();id=String(id);if(a.indexOf(id)<0)a.push(id);try{localStorage.setItem(hidKey(),JSON.stringify(a.slice(-500)))}catch(e){}}
+async function msgAct(e){
+ var b=e.target.closest("button[data-mx],button[data-ma]");if(!b||!cs.id)return;
+ if(b.dataset.mx){cs.sel=cs.sel==b.dataset.mx?null:b.dataset.mx;chatDraw();return}
+ var id=b.dataset.mid,a=b.dataset.ma,ce=$(cs.pg?"pcerr":"cerr");
+ if(a=="cancel"){cs.sel=null;chatDraw();return}
+ if(a=="me"){
+  if(!confirm("Delete this message for you? The other person will still see it."))return;
+  hidAdd(id);cs.sel=null;chatDraw();chatsRefresh();return}
+ if(a=="unsend"){
+  if(!confirm("Unsend this message? It will be removed for everyone in this chat."))return;
+  b.disabled=true;
+  var r=await sb.from("messages").delete().eq("id",id).eq("sender_id",user.id).select("id,image_path");
+  if(r.error||!r.data||!r.data.length){ce.textContent="Couldn't unsend that message. "+(r.error?r.error.message:"");b.disabled=false;return}
+  ce.textContent="";
+  if(r.data[0].image_path)sb.storage.from("chat-images").remove([r.data[0].image_path]);
+  delete cs.seen[id];cs.sel=null;chatDraw();chatsRefresh();toast("Message unsent.")}
+}
+$("cbox").addEventListener("click",msgAct);$("pcbox").addEventListener("click",msgAct);
 function chatDraw(){
  var box=$(cs.pg?"pcbox":"cbox"),near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
- var l=Object.keys(cs.seen).map(function(k){return cs.seen[k]}).filter(function(m){return Date.now()-new Date(m.created_at)<DAY}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at)});
- box.innerHTML=l.length?l.map(function(m,ix){var mine2=m.sender_id==user.id,h='<div class="msg'+(mine2?' me':'')+'">'+msgBody(m)+'<small>'+tm(m.created_at)+'</small></div>';
+ var hid=hidGet(),l=Object.keys(cs.seen).map(function(k){return cs.seen[k]}).filter(function(m){return Date.now()-new Date(m.created_at)<DAY&&hid.indexOf(String(m.id))<0}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at)});
+ box.innerHTML=l.length?l.map(function(m,ix){var mine2=m.sender_id==user.id,sid=String(m.id),bs='style="font:inherit;font-size:12px;margin:6px 6px 0 0;padding:4px 10px"',h='<div class="msg'+(mine2?' me':'')+'">'+msgBody(m)+'<small>'+tm(m.created_at)+' <button type="button" data-mx="'+esc(sid)+'" aria-label="Message options" aria-expanded="'+(cs.sel==sid)+'" style="background:none;border:0;color:inherit;opacity:.65;cursor:pointer;font-size:16px;line-height:1;padding:0 4px">\u22ef</button></small>'+(cs.sel==sid?'<div class="macts">'+(mine2?'<button type="button" class="btn alt" '+bs+' data-ma="unsend" data-mid="'+esc(sid)+'">Unsend</button>':'')+'<button type="button" class="btn alt" '+bs+' data-ma="me" data-mid="'+esc(sid)+'">Delete for me</button><button type="button" class="btn alt" '+bs+' data-ma="cancel" data-mid="'+esc(sid)+'">Cancel</button></div>':'')+'</div>';
   if(mine2||!cs.pg||!PEER.name)return h;
   var nx=l[ix+1],end=!nx||nx.sender_id!=m.sender_id;
   return '<div class="mrow"><span class="nic av mav'+(end?'':' gh')+'">'+(end?dp(PEER.url,PEER.name):'')+'</span>'+h+'</div>'}).join(""):'<p class="meta">No messages yet. Say hi and agree on where to meet.</p>';
@@ -441,17 +480,18 @@ function chatDraw(){
  signImgs(box);
 }
 async function chatFetch(){
- if(!cs.id)return;var id=cs.id;
+ if(!cs.id)return;var id=cs.id,t0=Date.now();
  var r=await sb.from("messages").select("id,sender_id,body,image_path,created_at").eq("conversation_id",id).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at");
  if(cs.id!=id)return;
  var ce=$(cs.pg?"pcerr":"cerr");if(r.error){ce.textContent="Couldn't load messages. "+r.error.message;return}
- ce.textContent="";r.data.forEach(function(m){cs.seen[m.id]=m});chatDraw();
+ ce.textContent="";var keep={};r.data.forEach(function(m){keep[m.id]=1;cs.seen[m.id]=m});
+ Object.keys(cs.seen).forEach(function(k){if(!keep[k]&&new Date(cs.seen[k].created_at).getTime()<t0-5000)delete cs.seen[k]});chatDraw();
 }
 async function openChat(id,title,pg){
  if(!user||!sb)return;chatStop();cs={id:id,seen:{},fresh:true,pg:!!pg};nRead("chat:"+id);
  $(pg?"pcbox":"cbox").innerHTML='<p class="meta">Loading...</p>';$(pg?"pcerr":"cerr").textContent="";$(pg?"pcin":"cin").value="";
  if(!pg){$("ctitle").textContent=title?"Chat: "+title:"Chat";$("cdlg").showModal()}
- cs.ch=sb.channel("chat-"+id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"conversation_id=eq."+id},function(p){if(cs.id==id&&p.new){cs.seen[p.new.id]=p.new;chatDraw()}}).subscribe();
+ cs.ch=sb.channel("chat-"+id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"conversation_id=eq."+id},function(p){if(cs.id==id&&p.new){cs.seen[p.new.id]=p.new;chatDraw()}}).on("postgres_changes",{event:"DELETE",schema:"public",table:"messages"},function(p){var d=p.old&&p.old.id;if(cs.id==id&&d!=null&&cs.seen[d]){delete cs.seen[d];chatDraw();chatsRefresh()}}).subscribe();
  cs.poll=setInterval(chatFetch,8000);
  await chatFetch();if(cs.id==id)cs.fresh=false;
 }
@@ -632,8 +672,8 @@ async function loadChatRows(){
  await nameFor(rows.filter(function(c){return !iAmTarget(c)}).map(function(c){return c.companion_id}));
  await Promise.all(rows.filter(function(c){return iAmTarget(c)&&!CNAME[c.id]}).map(function(c){return sb.rpc("conversation_person",{p_conv:c.id}).then(function(x){var d=x.data&&x.data[0];CNAME[c.id]=d&&d.first_name||"Someone";if(d&&d.photo_path)CPIC[c.id]=pubUrl(d.photo_path)})}));
  var last={};
- if(rows.length){var m=await sb.from("messages").select("conversation_id,sender_id,body,image_path,created_at").in("conversation_id",rows.map(function(c){return c.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
-  (m.data||[]).forEach(function(x){if(!last[x.conversation_id])last[x.conversation_id]=x})}
+ if(rows.length){var m=await sb.from("messages").select("id,conversation_id,sender_id,body,image_path,created_at").in("conversation_id",rows.map(function(c){return c.id})).gt("created_at",new Date(Date.now()-DAY).toISOString()).order("created_at",{ascending:false}).limit(300);
+  var hd=hidGet();(m.data||[]).forEach(function(x){if(!last[x.conversation_id]&&hd.indexOf(String(x.id))<0)last[x.conversation_id]=x})}
  rows.forEach(function(c){c.last=last[c.id]||null;CSTAT[c.id]=c.status});
  var keep=(prefs.pin||[]).filter(function(id){return rows.some(function(c){return c.id==id})});
  if(keep.length!=(prefs.pin||[]).length){prefs.pin=keep;persist()}
@@ -808,7 +848,7 @@ var AQ={t:null};
 async function checkReviewer(){
  var me=user&&user.id;if(!sb||!me)return;
  var r=await sb.rpc("is_reviewer");
- if(user&&user.id==me){isRev=r.data===true;updateNav();if(isRev)adminBadge()}
+ if(user&&user.id==me){isRev=!r.error&&r.data===true;updateNav();if(isRev)adminBadge();else{$("aq").innerHTML="";clearInterval(AQ.t)}}
 }
 async function adminBadge(){
  if(!isRev||!sb)return;
@@ -830,7 +870,7 @@ function adminCard(k,c,U){
   +'<div class="arow"><input class="rs" maxlength="300" placeholder="Reason (required to reject, shown to the person)" aria-label="Reason"><button class="btn" type="button" data-a="approve" data-id="'+esc(k.id)+'">Approve</button><button class="btn alt" type="button" data-a="reject" data-id="'+esc(k.id)+'">Reject</button></div></div>';
 }
 async function loadAdmin(){
- var el=$("aq");if(!isRev||!sb)return;
+ var el=$("aq");if(!isRev||!sb||!user)return;
  if(!el.querySelector(".ac"))el.innerHTML='<p class="meta" style="margin-top:16px">Loading...</p>';
  var r=await sb.from("kyc_submissions").select("id,user_id,id_type,dob,id_image_path,selfie_path,created_at").eq("status","submitted").order("created_at");
  if(r.error){el.innerHTML='<p class="meta" style="margin-top:16px">Couldn\'t load the queue. '+esc(r.error.message)+'</p>';return}
@@ -882,11 +922,10 @@ async function savePrefs(g,i){
  applySeg();load();return true}
 /* the Find a man / woman buttons only make sense for people who want to meet both */
 function applySeg(){
- var one=!!MP&&MP.interested_in!="B";$("seg").style.display=one?"none":"";
- if(one&&$("gender").value){$("gender").value="";setSeg();persist()}}
+ $("seg").style.display=""}
 function paintPause(){
  if(!mine)return;
- $("pstat").textContent=mine.paused?"Your profile is paused. Nobody can see it, but you can still browse and message people.":"Your profile is visible to people who want to meet someone like you.";
+ $("pstat").textContent=mine.paused?"Your profile is paused. Nobody can see it, but you can still browse and message people.":"Your profile is visible to everyone.";
  $("spause").textContent=mine.paused?"Unpause my profile":"Pause my profile"}
 function renderSettings(){
  if(!user)return;
@@ -921,6 +960,11 @@ function setTab(t){$("join").dataset.tab=t;[].forEach.call($("ptabs").children,f
 $("ptabs").onclick=function(e){var b=e.target.closest("button");if(b)setTab(b.dataset.t)};
 
 /* ---------- routing + init ---------- */
+$("logo").onclick=function(e){
+ e.preventDefault();
+ ["dlg","cdlg","mdlg","bdlg","pdlg","rdlg","ddlg"].forEach(function(id){var d=$(id);if(d&&d.open)d.close()});
+ if(location.hash!="#/"){location.hash="#/"}else{route()}
+ window.scrollTo(0,0)};
 var ANCH={"#browse":1,"#why":1,"#safety":1};
 function route(){
  var h=location.hash,v=h=="#/list"||h=="#/settings"?"list":h=="#/verify"?"verify":h=="#/login"?"login":h=="#/bookings"?"bookings":h.indexOf("#/chats")==0?"chats":h=="#/dashboard"?"dashboard":h=="#/admin"?"admin":"home";
@@ -932,8 +976,10 @@ function route(){
  if(v=="verify"&&mine&&mine.status=="verified"){location.hash="#/";return}
  if(v=="verify"&&pv!="verify")startVerify();
  clearInterval(AQ.t);
- if(v=="admin"&&!isRev){location.hash="#/";return}
- if(v=="admin"){loadAdmin();AQ.t=setInterval(autoAdmin,60000)}
+ if(v=="admin"){
+  if(!isRev){location.hash="#/";return}
+  checkReviewer().then(function(){if(!isRev){document.body.dataset.view="home";location.hash="#/"}});
+  loadAdmin();AQ.t=setInterval(autoAdmin,60000)}
  if(pv=="chats"&&v!="chats")chatStop();
  if(v=="chats")chatsPage(h.split("/")[2]||"");
  if(v=="bookings")loadBookings();

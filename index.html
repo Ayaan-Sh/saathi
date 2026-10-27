@@ -19,7 +19,7 @@
 <body data-view="home">
 <noscript><p style="padding:24px;text-align:center">Saathiyaa needs JavaScript. Please enable it to continue.</p></noscript>
 <div class="topbg"><div class="wrap">
-<nav><span class="logo">Saathiyaa</span><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My meets</a><a href="#/verify" id="verlink" hidden>Get ID verified</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
+<nav><a class="logo" id="logo" href="#/" style="margin-left:0">Saathiyaa</a><div><a href="#browse">Find</a><a href="#/list" id="listlink">Become a companion</a><a href="#/dashboard" id="dashlink" hidden>Dashboard</a><a href="#/admin" id="adminlink" hidden>Admin</a><a href="#/bookings">My meets</a><a href="#/verify" id="verlink" hidden>Get ID verified</a><a href="#safety">Safety</a><span class="nw" id="chatw" hidden><button class="bellb" id="chatb" type="button" aria-label="Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="bn" id="cbn" hidden>0</span></button></span><span class="nw" id="bellw" hidden><button class="bellb" id="bell" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="bn" id="bn" hidden>0</span></button><div class="npanel" id="npanel" hidden role="dialog" aria-label="Notifications"><div class="nh"><b>Notifications</b><span><button type="button" id="nsound">Sound: on</button><button type="button" id="nall">Mark all read</button></span></div><div class="nlist" id="nlist"></div></div></span><span id="acct"></span></div></nav>
 
 <header class="hero home"><h1 id="herotitle">Don't do garba alone.</h1><p id="herosub">Companions for garba, dandiya, dinners and weddings. Public places only, and you choose who to meet.</p>
 <div class="cta"><a class="btn white" href="#browse">Find a companion</a><a class="btn ghost" href="#/list">List yourself</a></div></header>
@@ -56,7 +56,7 @@
 <div class="why">
 <div><h3 id="why1h">Made for garba season</h3><p id="why1p">Dandiya partners, wedding plus-ones and dinner company, found by activity instead of guesswork.</p></div>
 <div><h3>Verify for a pink tick</h3><p>ID verification is optional. People who pass an ID and selfie check and a human review get a pink tick next to ID verified on their card.</p></div>
-<div><h3>Both sides choose</h3><p>Companions accept or decline every meet request and every chat request. No one is ever assigned. You only see, and are only seen by, people who want to meet someone like you.</p></div>
+<div><h3>Both sides choose</h3><p>Companions accept or decline every meet request and every chat request. No one is ever assigned. Everyone can browse everyone, and you choose who to reach out to.</p></div>
 <div><h3>Safe by design</h3><p>Every meet request names a public place, chat opens only after the other person accepts, you can share meet details with a friend in one tap, and you can report or block anyone.</p></div>
 <div><h3>Free to use</h3><p>Chat and meet requests cost nothing while we launch. No money changes hands through Saathiyaa.</p></div>
 <div><h3>Near you</h3><p>Share your location and see who is available around you, sorted by distance.</p></div>
@@ -91,7 +91,7 @@
 </div>
 <div class="stbox" id="mysettings">
 <h3>Who you want to meet</h3>
-<p class="meta">Only people who want to meet someone like you can see your profile, and you only see people who fit what you choose here. You can change this any time.</p>
+<p class="meta">Everyone can see your profile. This only tells us who you are and who you are hoping to meet. You can change it any time.</p>
 <label for="sg">I am</label><select id="sg"><option value="" disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
 <p class="meta" id="slock" hidden>Your gender is locked because your ID is verified. Contact support to change it.</p>
 <label for="si">I want to meet</label><select id="si"><option value="" disabled>Choose</option><option value="F">Women</option><option value="M">Men</option><option value="B">Both</option></select>
@@ -168,7 +168,7 @@
 <p class="meta" id="rerr" role="alert" style="color:#d33;margin-top:8px"></p>
 <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" type="submit" value="ok">Send report</button><button class="btn alt" value="x" formnovalidate>Cancel</button></div></form></dialog>
 <dialog id="odlg" aria-labelledby="ottl"><form id="oform"><h2 id="ottl" style="font-size:22px">Before you start</h2>
-<p class="meta" style="margin-top:6px">Tell us who you want to meet. Only people who want to meet someone like you can see your profile, and you only see people who fit what you choose. You can change this later in Settings.</p>
+<p class="meta" style="margin-top:6px">Tell us who you want to meet. This helps us tailor what you see first. You can change it later in Settings.</p>
 <label for="og">I am</label><select id="og"><option value="" selected disabled>Choose</option><option value="F">Woman</option><option value="M">Man</option></select>
 <label for="oi">I want to meet</label><select id="oi"><option value="" selected disabled>Choose</option><option value="F">Women</option><option value="M">Men</option><option value="B">Both</option></select>
 <p class="meta" id="oerr" role="alert" style="color:#d33;margin-top:8px"></p>
